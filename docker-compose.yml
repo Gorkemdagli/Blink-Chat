@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - PORT=3000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+    networks:
+      - chat-net
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - chat-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      - backend
+    networks:
+      - chat-net
+  # Optional: database service if not using remote Supabase entirely
+  # Since we use Supabase (Remote), we don't strictly need a db service, 
+  # but keeping the network structure clean.
+  # If we wanted to mock Supabase locally, we'd add it here.
+
+networks:
+  chat-net:
+    driver: bridge

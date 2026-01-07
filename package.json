@@ -1,0 +1,13 @@
+{
+    "name": "chat-app-root",
+    "version": "1.0.0",
+    "description": "Root configuration for Chat App",
+    "scripts": {
+        "build": "docker-compose up --build",
+        "down": "docker-compose down",
+        "backend:dev": "npm --prefix backend run dev",
+        "frontend:dev": "npm --prefix frontend run dev",
+        "test:backend": "npm --prefix backend test",
+        "test:frontend": "npm --prefix frontend test"
+    }
+}
