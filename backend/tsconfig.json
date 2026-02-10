@@ -1,0 +1,23 @@
+{
+    "compilerOptions": {
+        "module": "CommonJS",
+        "target": "ESNext",
+        "checkJs": true,
+        "baseUrl": ".",
+        "typeRoots": [
+            "./node_modules/@types"
+        ],
+        "types": [
+            "node"
+        ],
+        "allowJs": true,
+        "resolveJsonModule": true,
+        "skipLibCheck": true,
+        "strict": false,
+        "noEmit": true
+    },
+    "exclude": [
+        "node_modules",
+        "dist"
+    ]
+}

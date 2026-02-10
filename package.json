@@ -8,6 +8,8 @@
         "backend:dev": "npm --prefix backend run dev",
         "frontend:dev": "npm --prefix frontend run dev",
         "test:backend": "npm --prefix backend test",
-        "test:frontend": "npm --prefix frontend test"
+        "test:frontend": "npm --prefix frontend test",
+        "lint": "npm --prefix frontend run lint",
+        "test": "npm run test:backend && npm run test:frontend"
     }
 }

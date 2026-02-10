@@ -10,7 +10,8 @@ import {
   File as FileIcon,
   X,
   Download,
-  FileText
+  FileText,
+  ChevronDown
 } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { getSocket } from '../socket'
@@ -51,7 +52,14 @@ export default function ChatWindow({
   const [previewImage, setPreviewImage] = useState(null) // State for lightbox
   const [isDragging, setIsDragging] = useState(false) // State for drag and drop
   const [typingUsers, setTypingUsers] = useState(new Map()) // userId -> username
+  const [showScrollButton, setShowScrollButton] = useState(false)
   const typingTimeoutRef = useRef(null)
+
+  // Ref for messages to use in effect without dependency
+  const messagesRef = useRef(messages)
+  useEffect(() => {
+    messagesRef.current = messages
+  }, [messages])
 
   // Socket Listener for Typing & Read Receipts
   useEffect(() => {
@@ -76,12 +84,12 @@ export default function ChatWindow({
 
     // Typing listeners
     socket.on('typing', ({ userId, username, isTyping }) => handleTyping({ userId, username, isTyping: isTyping }))
-    socket.on('stop_typing', ({ userId }) => handleTyping({ userId, isTyping: false }))
+    socket.on('stop_typing', ({ userId: _userId }) => handleTyping({ userId: _userId, isTyping: false }))
 
     // Mark Read on mount or active
     const markRead = () => {
-      if (messages.length > 0 && document.visibilityState === 'visible') {
-        const hasUnread = messages.some(m => m.user_id !== session.user.id && m.status !== 'read')
+      if (messagesRef.current.length > 0 && document.visibilityState === 'visible') {
+        const hasUnread = messagesRef.current.some(m => m.user_id !== session.user.id && m.status !== 'read')
         if (hasUnread) {
           socket.emit('mark_read', { roomId: selectedRoom.id, userId: session.user.id })
         }
@@ -231,11 +239,17 @@ export default function ChatWindow({
       return
     }
 
-    // Yeni mesajlar geldiğinde: Sadece kullanıcı alttaysa scroll yap
+    // Yeni mesajlar geldiğinde (Scroll yönetimi)
     if (messages.length > 0 && !isLoadingMessages && !isInitialLoadRef.current) {
-      const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100
+      // En son mesajın kimden geldiğini kontrol et
+      const lastMessage = messages[messages.length - 1]
+      const isMyMessage = lastMessage?.user_id === session?.user?.id || lastMessage?.sender === 'me'
 
-      if (isAtBottom) {
+      // Kullanıcı zaten en altta mı (150px tolerans)
+      const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150
+
+      // Eğer mesaj benden geldiyse VEYA kullanıcı zaten en alttaysa aşağı kaydır
+      if (isMyMessage || isAtBottom) {
         setTimeout(() => {
           if (messagesEndRef.current) {
             messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
@@ -254,6 +268,7 @@ export default function ChatWindow({
     if (!container || !hasMoreMessages || isLoadingMoreMessages || !onLoadMoreMessages) return
 
     const handleScroll = () => {
+      // Pagination logic
       if (container.scrollTop < 100 && hasMoreMessages && !isLoadingMoreMessages) {
         const previousScrollHeight = container.scrollHeight
         const previousScrollTop = container.scrollTop
@@ -269,11 +284,50 @@ export default function ChatWindow({
           console.error('Error loading more messages:', err)
         })
       }
+
+      // Scroll to bottom button visibility logic: Show if more than 150px from bottom
+      const isUp = container.scrollHeight - container.scrollTop - container.clientHeight > 150
+      setShowScrollButton(isUp)
     }
 
     container.addEventListener('scroll', handleScroll)
     return () => container.removeEventListener('scroll', handleScroll)
   }, [hasMoreMessages, isLoadingMoreMessages, onLoadMoreMessages])
+
+  const scrollToBottom = () => {
+    if (!scrollRef.current) return
+
+    const container = scrollRef.current
+    const start = container.scrollTop
+    const end = container.scrollHeight - container.clientHeight
+    const change = end - start
+    const duration = 800 // Slower scroll duration in ms
+    let startTime = null
+
+    const animateScroll = (currentTime) => {
+      if (!startTime) startTime = currentTime
+      const progress = currentTime - startTime
+
+      // Ease-in-out function for a more organic feel
+      const easeInOutQuad = (t, b, c, d) => {
+        t /= d / 2
+        if (t < 1) return (c / 2) * t * t + b
+        t--
+        return (-c / 2) * (t * (t - 2) - 1) + b
+      }
+
+      const val = easeInOutQuad(progress, start, change, duration)
+      container.scrollTop = val
+
+      if (progress < duration) {
+        requestAnimationFrame(animateScroll)
+      } else {
+        container.scrollTop = end // Ensure exact end
+      }
+    }
+
+    requestAnimationFrame(animateScroll)
+  }
 
   const formatBytes = (bytes, decimals = 1) => {
     if (!bytes) return '0 Bytes'
@@ -335,7 +389,7 @@ export default function ChatWindow({
       const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`
       const filePath = `${fileName}`
 
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from('chat-files')
         .upload(filePath, file, {
           cacheControl: '3600',
@@ -419,7 +473,7 @@ export default function ChatWindow({
   }
 
   // Mobil için long press (basılı tutma) handler
-  const handleTouchStart = (messageId, e) => {
+  const handleTouchStart = (messageId) => {
     if (!onDeleteMessage) return
 
     // Tüm mesajlar silinebilir (gelen ve giden)
@@ -436,7 +490,7 @@ export default function ChatWindow({
     }, 500)
   }
 
-  const handleTouchEnd = (e) => {
+  const handleTouchEnd = () => {
     // Timer'ı temizle
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current)
@@ -444,7 +498,7 @@ export default function ChatWindow({
     }
   }
 
-  const handleTouchMove = (e) => {
+  const handleTouchMove = () => {
     // Kullanıcı parmağını hareket ettirirse long press'i iptal et
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current)
@@ -489,7 +543,7 @@ export default function ChatWindow({
     let emojiRegex
     try {
       emojiRegex = /(\p{Emoji_Presentation}|\p{Emoji}\uFE0F?)/gu
-    } catch (e) {
+    } catch {
       // Fallback: Geniş emoji range
       emojiRegex = /([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{1F900}-\u{1F9FF}]|[\u{1FA00}-\u{1FA6F}]|[\u{2190}-\u{21FF}]|[\u{2300}-\u{23FF}]|[\u{2B50}-\u{2B55}]|[\u{3030}-\u{303F}]|[\u{3299}-\u{3299}]|[\u{FE00}-\u{FE0F}]|[\u{200D}]|[\u{20E3}]|[\u{FE0F}])+/gu
     }
@@ -555,16 +609,17 @@ export default function ChatWindow({
     }
     // DM odalarında "DM:" prefix'ini kaldır
     if (room.type === 'dm') {
-      return room.name.replace(/^DM:\s*/i, '')
+      return room.name.replace(/^DM:\s*/i, '') || 'Sohbet'
     }
-    return room.name
+    return room.name || 'Grup'
   }
 
   const getRoomAvatar = (room) => {
     if (room.type === 'dm' && room.otherUser) {
-      return room.otherUser.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(room.otherUser.username || room.otherUser.email)}`
+      const name = room.otherUser.username || room.otherUser.email || 'Bilinmeyen'
+      return room.otherUser.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}`
     }
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(room.name)}`
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(room.name || 'Grup')}`
   }
 
   // Son görülme zamanını formatla
@@ -575,8 +630,6 @@ export default function ChatWindow({
     const seen = new Date(lastSeen)
     const diffMs = now - seen
     const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMs / 3600000)
-
     // Son 1 saat içindeyse dakika olarak göster
     if (diffMins < 60) {
       if (diffMins < 1) return 'Şimdi'
@@ -588,13 +641,13 @@ export default function ChatWindow({
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-gray-50 to-white dark:from-slate-950 dark:to-slate-900 relative w-full transition-colors"
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-gray-50 to-white dark:from-slate-950 dark:to-slate-900 relative w-full"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       {/* Top Bar */}
-      <header className="h-[64px] md:h-[72px] flex items-center justify-between px-4 md:px-6 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 shrink-0 transition-colors">
+      <header className="h-[64px] md:h-[72px] flex items-center justify-between px-4 md:px-6 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 shrink-0">
         <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
           <button
             onClick={onBack}
@@ -633,7 +686,7 @@ export default function ChatWindow({
                   {isOnline ? (
                     <>
                       <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                      <span>Online</span>
+                      <span>Çevrimiçi</span>
                     </>
                   ) : (
                     <>
@@ -672,7 +725,7 @@ export default function ChatWindow({
       {/* Messages */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 space-y-4 flex flex-col transition-all"
+        className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 space-y-4 flex flex-col"
       >
         {isLoadingMessages ? (
           <div className="flex items-center justify-center h-full">
@@ -758,7 +811,7 @@ export default function ChatWindow({
                             download={msg.file_name || 'file'}
                             className={`p-2 hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm rounded-full transition-all shrink-0 ${isMe ? 'text-white/80 hover:text-white' : 'text-slate-900 dark:text-gray-100 hover:text-sky-600'}`}
                             title="İndir"
-                            onClick={(e) => {
+                            onClick={() => {
                               // Force download by preventing default if needed, 
                               // but standard download attribute usually handles it
                             }}
@@ -868,8 +921,19 @@ export default function ChatWindow({
         )}
       </div>
 
+      {/* Scroll to Bottom Button */}
+      {showScrollButton && (
+        <button
+          onClick={scrollToBottom}
+          className="absolute bottom-[90px] md:bottom-[100px] right-6 p-2.5 bg-white dark:bg-slate-800 text-sky-500 rounded-full shadow-xl border border-gray-100 dark:border-slate-700 hover:scale-110 active:scale-95 transition-all z-30 animate-in fade-in slide-in-from-bottom-4"
+          title="En Alta Git"
+        >
+          <ChevronDown size={24} strokeWidth={2.5} />
+        </button>
+      )}
+
       {/* Input Area */}
-      <div className="h-[72px] md:h-[80px] px-2 md:px-6 bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-slate-800 shrink-0 relative flex items-center transition-colors overflow-hidden">
+      <div className="h-[72px] md:h-[80px] px-2 md:px-6 bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-slate-800 shrink-0 relative flex items-center overflow-hidden">
         {/* Emoji Picker */}
         {showEmojiPicker && (
           <div
@@ -1047,7 +1111,7 @@ export default function ChatWindow({
                     a.click()
                     window.URL.revokeObjectURL(url)
                     document.body.removeChild(a)
-                  } catch (err) {
+                  } catch {
                     window.open(previewImage, '_blank')
                   }
                 }}

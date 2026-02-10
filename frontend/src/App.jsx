@@ -3,6 +3,68 @@ import { supabase } from './supabaseClient'
 import Auth from './components/Auth'
 import Chat from './components/Chat'
 
+
+// Helper functions defined outside component to be stable dependencies
+// Check if session is inactive for too long (security: clear inactive sessions)
+const isSessionInactive = (session) => {
+  if (!session) return true
+
+  // Check last active time (when user was last on the app)
+  const lastActiveKey = `last_active_${session.user?.id}`
+  const lastActive = localStorage.getItem(lastActiveKey)
+  const now = Date.now()
+
+  if (lastActive) {
+    const hoursSinceActive = (now - parseInt(lastActive)) / (1000 * 60 * 60)
+    // If user hasn't been active for more than 24 hours, clear session for security
+    const MAX_INACTIVE_HOURS = 24
+    if (hoursSinceActive > MAX_INACTIVE_HOURS) {
+      console.log(`Session inactive for ${Math.floor(hoursSinceActive)} hours (max: ${MAX_INACTIVE_HOURS} hours), clearing...`)
+      localStorage.removeItem(lastActiveKey)
+      return true
+    }
+  } else {
+    // No last active time stored - this is a new session or old session without tracking
+    // Store current time as last active
+    localStorage.setItem(lastActiveKey, now.toString())
+  }
+
+  return false
+}
+
+// Update last active time
+const updateLastActive = (session) => {
+  if (session?.user?.id) {
+    const lastActiveKey = `last_active_${session.user.id}`
+    localStorage.setItem(lastActiveKey, Date.now().toString())
+  }
+}
+
+// Simple session validation - only check expiration, don't call getUser() to avoid loops
+const isSessionValid = (session) => {
+  if (!session) return false
+
+  // Check if session is inactive for too long
+  if (isSessionInactive(session)) {
+    return false
+  }
+
+  // Check if token is expired
+  const expiresAt = session.expires_at
+  if (expiresAt && expiresAt * 1000 < Date.now()) {
+    console.log('Session expired')
+    return false
+  }
+
+  // Check if user exists in session
+  if (!session.user || !session.user.id) {
+    console.log('Session missing user data')
+    return false
+  }
+
+  return true
+}
+
 function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -33,66 +95,6 @@ function App() {
       } finally {
         setLoading(false)
       }
-    }
-
-    // Check if session is inactive for too long (security: clear inactive sessions)
-    const isSessionInactive = (session) => {
-      if (!session) return true
-
-      // Check last active time (when user was last on the app)
-      const lastActiveKey = `last_active_${session.user?.id}`
-      const lastActive = localStorage.getItem(lastActiveKey)
-      const now = Date.now()
-
-      if (lastActive) {
-        const hoursSinceActive = (now - parseInt(lastActive)) / (1000 * 60 * 60)
-        // If user hasn't been active for more than 24 hours, clear session for security
-        const MAX_INACTIVE_HOURS = 24
-        if (hoursSinceActive > MAX_INACTIVE_HOURS) {
-          console.log(`Session inactive for ${Math.floor(hoursSinceActive)} hours (max: ${MAX_INACTIVE_HOURS} hours), clearing...`)
-          localStorage.removeItem(lastActiveKey)
-          return true
-        }
-      } else {
-        // No last active time stored - this is a new session or old session without tracking
-        // Store current time as last active
-        localStorage.setItem(lastActiveKey, now.toString())
-      }
-
-      return false
-    }
-
-    // Update last active time
-    const updateLastActive = (session) => {
-      if (session?.user?.id) {
-        const lastActiveKey = `last_active_${session.user.id}`
-        localStorage.setItem(lastActiveKey, Date.now().toString())
-      }
-    }
-
-    // Simple session validation - only check expiration, don't call getUser() to avoid loops
-    const isSessionValid = (session) => {
-      if (!session) return false
-
-      // Check if session is inactive for too long
-      if (isSessionInactive(session)) {
-        return false
-      }
-
-      // Check if token is expired
-      const expiresAt = session.expires_at
-      if (expiresAt && expiresAt * 1000 < Date.now()) {
-        console.log('Session expired')
-        return false
-      }
-
-      // Check if user exists in session
-      if (!session.user || !session.user.id) {
-        console.log('Session missing user data')
-        return false
-      }
-
-      return true
     }
 
     // Get initial session
@@ -191,22 +193,30 @@ function App() {
       }
     })
 
-    // Update last active time periodically while user is active (every 5 minutes)
+    // Clean up on unmount
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, []) // No dependencies needed for initial setup
+
+  // Separate effect for session activity tracking
+  useEffect(() => {
     let activeInterval
     if (session) {
+      // Update immediately on session start
+      updateLastActive(session)
+
       activeInterval = setInterval(() => {
         updateLastActive(session)
       }, 5 * 60 * 1000) // 5 minutes
     }
 
-    // Clean up on unmount
     return () => {
-      subscription.unsubscribe()
       if (activeInterval) {
         clearInterval(activeInterval)
       }
     }
-  }, [])
+  }, [session])
 
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem('chat-theme') === 'dark'
@@ -227,7 +237,7 @@ function App() {
   // Show loading screen while checking session
   if (loading) {
     return (
-      <div className="h-screen w-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center transition-colors">
+      <div className="h-screen w-full bg-gray-50 dark:bg-slate-900 flex items-center justify-center transition-colors">
         <div className="text-center">
           <div className="animate-spin inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">Yükleniyor...</p>
@@ -237,7 +247,7 @@ function App() {
   }
 
   return (
-    <div className="h-screen w-screen bg-gray-50 dark:bg-slate-900 transition-colors">
+    <div className="h-screen w-full bg-gray-50 dark:bg-slate-900">
       {!session ? (
         <Auth onAuth={setSession} darkMode={darkMode} onToggleDarkMode={toggleDarkMode} />
       ) : (

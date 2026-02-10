@@ -78,7 +78,9 @@ supabase/.temp/
 .certificates/
 
 # Project specific
-analiz.md
+analiz2.md
 to-do.md
 online.md
+
+.agent/
 

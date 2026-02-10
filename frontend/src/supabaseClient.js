@@ -9,4 +9,24 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     persistSession: true,
     detectSessionInUrl: true,
   },
+  realtime: {
+    params: {
+      eventsPerSecond: 10,
+    },
+  },
+  global: {
+    headers: {
+      'x-client-info': 'chat-app',
+    },
+    fetch: (url, options = {}) => {
+      // Connection keep-alive için timeout artır
+      return fetch(url, {
+        ...options,
+        keepalive: true,
+      })
+    },
+  },
+  db: {
+    schema: 'public',
+  },
 })

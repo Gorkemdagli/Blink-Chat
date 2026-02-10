@@ -2,10 +2,65 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
+  width: 100%;
   margin: 0;
+  padding: 0;
   font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Custom Scrollbar Styling */
+@layer base {
+  :root {
+    color-scheme: light;
+    --scrollbar-track: #f8fafc;
+    /* slate-50 */
+    --scrollbar-thumb: #e2e8f0;
+    /* slate-200 */
+    --scrollbar-thumb-hover: #cbd5e1;
+    /* slate-300 */
+  }
+
+  .dark {
+    color-scheme: dark;
+    --scrollbar-track: #0f172a;
+    /* slate-900 */
+    --scrollbar-thumb: #334155;
+    /* slate-700 */
+    --scrollbar-thumb-hover: #475569;
+    /* slate-600 */
+  }
+
+  /* Global scrollbar styles */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+
+  /* Webkit browsers (Chrome, Safari, Edge) */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    border-radius: 10px;
+    border: 2px solid var(--scrollbar-track);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+  }
 }
 
 /* Toast animasyonu */
@@ -14,6 +69,7 @@ html, body, #root {
     transform: translateY(100px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;

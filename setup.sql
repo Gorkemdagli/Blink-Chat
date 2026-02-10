@@ -116,7 +116,48 @@ CREATE INDEX IF NOT EXISTS idx_users_user_code ON public.users(user_code);
 CREATE INDEX IF NOT EXISTS idx_friends_user_id ON public.friends(user_id);
 CREATE INDEX IF NOT EXISTS idx_friends_friend_id ON public.friends(friend_id);
 CREATE INDEX IF NOT EXISTS idx_room_members_user_room ON public.room_members(user_id, room_id);
+CREATE INDEX IF NOT EXISTS idx_room_members_user_id ON public.room_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_messages_room_id ON public.messages(room_id);
+CREATE INDEX IF NOT EXISTS idx_room_deletions_user_id ON public.room_deletions(user_id);
+CREATE INDEX IF NOT EXISTS idx_message_deletions_user_id ON public.message_deletions(user_id);
+CREATE INDEX IF NOT EXISTS idx_friend_requests_receiver_status ON public.friend_requests(receiver_id, status);
+CREATE INDEX IF NOT EXISTS idx_room_invitations_invitee_status ON public.room_invitations(invitee_id, status);
+
+-- ============================================
+-- 3.5 VIEWS
+-- ============================================
+
+CREATE OR REPLACE VIEW public.friends_with_details AS
+SELECT 
+    f.*,
+    u.username,
+    u.avatar_url,
+    u.email,
+    u.user_code
+FROM public.friends f
+JOIN public.users u ON f.friend_id = u.id;
+
+CREATE OR REPLACE VIEW public.pending_friend_requests_with_details AS
+SELECT 
+    fr.*,
+    u.username as sender_name,
+    u.avatar_url as sender_avatar,
+    u.email as sender_email,
+    u.user_code as sender_code
+FROM public.friend_requests fr
+JOIN public.users u ON fr.sender_id = u.id
+WHERE fr.status = 'pending';
+
+CREATE OR REPLACE VIEW public.pending_invitations_with_details AS
+SELECT 
+    ri.*,
+    r.name as room_name,
+    u.username as inviter_name,
+    u.avatar_url as inviter_avatar
+FROM public.room_invitations ri
+JOIN public.rooms r ON ri.room_id = r.id
+JOIN public.users u ON ri.inviter_id = u.id
+WHERE ri.status = 'pending';
 
 -- ============================================
 -- 4. FUNCTIONS
@@ -205,6 +246,51 @@ BEGIN
   RETURN json_build_object('success', true, 'message', 'Friend request sent');
 EXCEPTION WHEN unique_violation THEN
   RETURN json_build_object('success', false, 'error', 'Request already sent');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Combined RPC for Initial Data (OPTIMIZATION)
+CREATE OR REPLACE FUNCTION public.get_chat_init_data()
+RETURNS JSON AS $$
+DECLARE
+  uid UUID := auth.uid();
+  res JSON;
+BEGIN
+  -- Perform a single transaction-stable query for all initial state
+  SELECT json_build_object(
+    'current_user', (SELECT row_to_json(u) FROM public.users u WHERE id = uid),
+    'rooms', (
+      SELECT json_agg(r_data) FROM (
+        SELECT r.*, 
+               (
+                 SELECT json_agg(m_data) FROM (
+                   SELECT rm.user_id, u.username, u.avatar_url
+                   FROM public.room_members rm
+                   JOIN public.users u ON rm.user_id = u.id
+                   WHERE rm.room_id = r.id
+                 ) m_data
+               ) as members
+        FROM public.rooms r
+        WHERE r.id IN (SELECT room_id FROM public.room_members WHERE user_id = uid)
+      ) r_data
+    ),
+    'room_deletions', (SELECT COALESCE(json_agg(rd.room_id), '[]'::json) FROM public.room_deletions rd WHERE user_id = uid),
+    'message_deletions', (SELECT COALESCE(json_agg(md.message_id), '[]'::json) FROM public.message_deletions md WHERE user_id = uid),
+    'friends', (SELECT COALESCE(json_agg(f), '[]'::json) FROM public.friends_with_details f WHERE user_id = uid),
+    'friend_requests', (SELECT COALESCE(json_agg(fr), '[]'::json) FROM public.pending_friend_requests_with_details fr WHERE receiver_id = uid),
+    'invitations', (SELECT COALESCE(json_agg(i), '[]'::json) FROM public.pending_invitations_with_details i WHERE invitee_id = uid),
+    'last_messages', (
+      SELECT COALESCE(json_agg(m_data), '[]'::json) FROM (
+        SELECT DISTINCT ON (room_id) m.*, u.username, u.avatar_url
+        FROM public.messages m
+        JOIN public.users u ON m.user_id = u.id
+        WHERE room_id IN (SELECT room_id FROM public.room_members WHERE user_id = uid)
+        ORDER BY room_id, created_at DESC
+      ) m_data
+    )
+  ) INTO res;
+  
+  RETURN res;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

@@ -3,8 +3,6 @@ import {
   Bell,
   LogOut,
   Plus,
-  Users,
-  Lock,
   Copy,
   Check,
   Moon,
@@ -49,26 +47,7 @@ export default function Sidebar({
     return room.name
   }
 
-  // Son görülme zamanını formatla
-  const formatLastSeen = (lastSeen) => {
-    if (!lastSeen) return 'Bilinmiyor'
 
-    const now = new Date()
-    const seen = new Date(lastSeen)
-    const diffMs = now - seen
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMs / 3600000)
-    const diffDays = Math.floor(diffMs / 86400000)
-
-    if (diffMins < 1) return 'Şimdi'
-    if (diffMins < 60) return `${diffMins} dakika önce`
-    if (diffHours < 24) return `${diffHours} saat önce`
-    if (diffDays === 1) return 'Dün'
-    if (diffDays < 7) return `${diffDays} gün önce`
-
-    // Daha uzun süreler için tarih göster
-    return seen.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })
-  }
 
   // User code'u kopyala
   const copyUserCode = async () => {
@@ -77,17 +56,17 @@ export default function Sidebar({
         await navigator.clipboard.writeText(currentUser.user_code.toString())
         setCopiedCode(true)
         setTimeout(() => setCopiedCode(false), 2000)
-      } catch (err) {
-        console.error('Failed to copy:', err)
+      } catch {
+        console.error('Failed to copy')
       }
     }
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-white dark:bg-slate-900 border-r border-gray-100 dark:border-slate-800 transition-colors">
+    <div className="w-full h-full flex flex-col bg-white dark:bg-slate-900 border-r border-gray-100 dark:border-slate-800">
       {/* Header */}
       <div className="h-[64px] md:h-[72px] px-4 md:px-6 flex items-center justify-between shrink-0 border-b border-gray-100 dark:border-slate-800">
-        <h1 className="text-xl font-bold tracking-tight dark:text-white transition-colors">Chat App</h1>
+        <h1 className="text-xl font-bold tracking-tight dark:text-white">Chat App</h1>
         <div className="flex items-center gap-3">
           <button
             onClick={onToggleDarkMode}
@@ -111,7 +90,7 @@ export default function Sidebar({
 
       {/* Tabs */}
       <div className="px-4 md:px-5 mb-4 shrink-0 pt-4">
-        <div className="flex p-1 bg-gray-100 dark:bg-slate-800 rounded-lg transition-colors">
+        <div className="flex p-1 bg-gray-100 dark:bg-slate-800 rounded-lg">
           {['Odalar', 'Arkadaşlar'].map((tab) => (
             <button
               key={tab}
@@ -267,13 +246,11 @@ export default function Sidebar({
                           className="w-9 h-9 rounded-full bg-gray-200 dark:bg-slate-700"
                           alt={user.username || user.email}
                         />
-                        {friend.online && (
-                          <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-slate-900"></span>
-                        )}
+                        <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${userPresence.get(user.id)?.online ? 'bg-green-500' : 'bg-gray-400 dark:bg-gray-600'}`}></span>
                       </div>
                       <div className="flex-1 overflow-hidden">
                         <p className="text-sm font-semibold truncate text-slate-900 dark:text-gray-200">
-                          {user.username || user.email || 'Kullanıcı'}
+                          {user.username || user.email || 'Bilinmeyen Kullanıcı'}
                         </p>
                         {user.user_code && (
                           <p className="text-xs text-gray-400 dark:text-gray-500 font-mono">#{user.user_code}</p>
@@ -289,7 +266,7 @@ export default function Sidebar({
       </div>
 
       {/* Footer */}
-      <div className="h-[72px] md:h-[80px] px-4 md:px-6 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white dark:bg-slate-900/50 transition-colors">
+      <div className="h-[72px] md:h-[80px] px-4 md:px-6 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white dark:bg-slate-900/50">
         <div className="flex items-center gap-3">
           <img
             src={currentUser?.avatar_url || `https://ui-avatars.com/api/?name=${currentUser?.username || 'Kullanıcı'}`}
@@ -298,7 +275,7 @@ export default function Sidebar({
           />
           <div className="flex flex-col gap-0.5">
             <span className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
-              {currentUser?.username || currentUser?.email?.split('@')[0] || 'Kullanıcı'}
+              {currentUser?.username || currentUser?.email?.split('@')[0] || (currentUser ? 'İsimsiz Kullanıcı' : 'Yükleniyor...')}
             </span>
             {currentUser?.user_code && (
               <div className="flex items-center gap-1.5">

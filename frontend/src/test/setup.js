@@ -3,7 +3,7 @@ import { vi } from 'vitest';
 
 // Dummy env vars for tests to prevent Supabase initialization errors
 if (typeof import.meta.env === 'undefined') {
-    global.import = { meta: { env: {} } };
+    globalThis.import = { meta: { env: {} } };
 }
 
 import.meta.env.VITE_SUPABASE_URL = 'https://dummy.supabase.co';
@@ -27,6 +27,12 @@ vi.mock('../supabaseClient', () => ({
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockReturnThis(),
             order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockReturnThis(),
+            in: vi.fn().mockReturnThis(),
+            neq: vi.fn().mockReturnThis(),
+            lt: vi.fn().mockReturnThis(),
+            rpc: vi.fn().mockReturnThis(),
         })),
         storage: {
             from: vi.fn(() => ({

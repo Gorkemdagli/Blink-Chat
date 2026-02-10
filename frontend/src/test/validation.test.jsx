@@ -8,12 +8,12 @@ vi.mock('dompurify', () => ({
             // Simple mock: remove <tags> to simulate sanitization
             // This is enough to make containsXSS detect a change
             if (!msg) return "";
-            return msg.replace(/<[^>]*>/g, '').trim(); 
+            return msg.replace(/<[^>]*>/g, '').trim();
         }
     }
 }));
 
-import { messageSchema, containsXSS } from '../components/Chat';
+import { messageSchema, containsXSS } from '../hooks';
 
 describe('Message Validation Logic', () => {
 
@@ -27,10 +27,10 @@ describe('Message Validation Logic', () => {
         it('should return true for HTML tags', () => {
             // "<b>Bold</b>" -> "Bold". Change detected.
             expect(containsXSS('<b>Bold</b>')).toBe(true);
-            
+
             // "<script>..." -> "alert(1)". Change detected.
             expect(containsXSS('<script>alert(1)</script>')).toBe(true);
-            
+
             // Image tag removed -> Change detected.
             expect(containsXSS('<img src=x />')).toBe(true);
         });
