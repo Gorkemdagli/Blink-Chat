@@ -1,8 +1,8 @@
 -- ============================================
--- 💬 CHAT APP - COMPLETE SUPABASE SCHEMA (v2.0)
+-- 💬 CHAT APP - COMPLETE SUPABASE SCHEMA (v2.1 Optimized)
 -- ============================================
 -- Bu dosya, uygulamanın çalışması için gereken tüm veritabanı yapısını içerir.
--- Supabase SQL Editor üzerinden tek seferde çalıştırabilirsiniz.
+-- 2026-02-13: Added composite indexes and optimized RPC.
 -- ============================================
 
 BEGIN;
@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   email TEXT, -- Email (RLS ile korunur)
   avatar_url TEXT,
   user_code INTEGER UNIQUE, -- 7-digit unique code
+  bio TEXT,
   updated_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -31,6 +32,7 @@ CREATE TABLE IF NOT EXISTS public.rooms (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
   type TEXT CHECK (type IN ('private', 'dm')) DEFAULT 'private',
+  avatar_url TEXT,
   created_by UUID REFERENCES public.users(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -110,7 +112,7 @@ CREATE TABLE IF NOT EXISTS public.room_invitations (
 );
 
 -- ============================================
--- 3. INDEXES
+-- 3. INDEXES (OPTIMIZED)
 -- ============================================
 CREATE INDEX IF NOT EXISTS idx_users_user_code ON public.users(user_code);
 CREATE INDEX IF NOT EXISTS idx_friends_user_id ON public.friends(user_id);
@@ -122,6 +124,10 @@ CREATE INDEX IF NOT EXISTS idx_room_deletions_user_id ON public.room_deletions(u
 CREATE INDEX IF NOT EXISTS idx_message_deletions_user_id ON public.message_deletions(user_id);
 CREATE INDEX IF NOT EXISTS idx_friend_requests_receiver_status ON public.friend_requests(receiver_id, status);
 CREATE INDEX IF NOT EXISTS idx_room_invitations_invitee_status ON public.room_invitations(invitee_id, status);
+
+-- New Composite Indexes for Performance
+CREATE INDEX IF NOT EXISTS idx_messages_room_id_created_at ON public.messages(room_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_message_deletions_composite ON public.message_deletions(user_id, message_id);
 
 -- ============================================
 -- 3.5 VIEWS
@@ -249,14 +255,17 @@ EXCEPTION WHEN unique_violation THEN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Combined RPC for Initial Data (OPTIMIZATION)
+-- Combined RPC for Initial Data (OPTIMIZATION: Uses LATERAL JOIN & Ghost Room Fix)
 CREATE OR REPLACE FUNCTION public.get_chat_init_data()
 RETURNS JSON AS $$
 DECLARE
   uid UUID := auth.uid();
   res JSON;
 BEGIN
-  -- Perform a single transaction-stable query for all initial state
+  IF uid IS NULL THEN
+    RETURN json_build_object('error', 'User not authenticated');
+  END IF;
+
   SELECT json_build_object(
     'current_user', (SELECT row_to_json(u) FROM public.users u WHERE id = uid),
     'rooms', (
@@ -272,6 +281,7 @@ BEGIN
                ) as members
         FROM public.rooms r
         WHERE r.id IN (SELECT room_id FROM public.room_members WHERE user_id = uid)
+          AND r.id NOT IN (SELECT room_id FROM public.room_deletions WHERE user_id = uid)
       ) r_data
     ),
     'room_deletions', (SELECT COALESCE(json_agg(rd.room_id), '[]'::json) FROM public.room_deletions rd WHERE user_id = uid),
@@ -281,11 +291,17 @@ BEGIN
     'invitations', (SELECT COALESCE(json_agg(i), '[]'::json) FROM public.pending_invitations_with_details i WHERE invitee_id = uid),
     'last_messages', (
       SELECT COALESCE(json_agg(m_data), '[]'::json) FROM (
-        SELECT DISTINCT ON (room_id) m.*, u.username, u.avatar_url
-        FROM public.messages m
+        SELECT m.*, u.username, u.avatar_url
+        FROM public.rooms r
+        JOIN LATERAL (
+          SELECT * FROM public.messages 
+          WHERE room_id = r.id 
+          ORDER BY created_at DESC 
+          LIMIT 1
+        ) m ON true
         JOIN public.users u ON m.user_id = u.id
-        WHERE room_id IN (SELECT room_id FROM public.room_members WHERE user_id = uid)
-        ORDER BY room_id, created_at DESC
+        WHERE r.id IN (SELECT room_id FROM public.room_members WHERE user_id = uid)
+          AND r.id NOT IN (SELECT room_id FROM public.room_deletions WHERE user_id = uid)
       ) m_data
     )
   ) INTO res;
@@ -293,6 +309,52 @@ BEGIN
   RETURN res;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+
+-- Optimized Message Loading RPC (Bypasses RLS overhead & Timestamp Pagination)
+CREATE OR REPLACE FUNCTION get_chat_messages(
+  p_room_id UUID, 
+  p_limit INTEGER DEFAULT 50, 
+  p_before_created_at TIMESTAMPTZ DEFAULT NULL
+)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  current_user_id UUID := auth.uid();
+  result JSON;
+BEGIN
+  -- 1. Strict Permission Check
+  IF current_user_id IS NULL THEN
+    RETURN '[]'::json;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM public.room_members 
+    WHERE room_id = p_room_id AND user_id = current_user_id
+  ) THEN
+    -- User not in room -> Return empty list
+    RETURN '[]'::json;
+  END IF;
+
+  -- 2. Fetch messages as JSON directly (Optimized)
+  SELECT COALESCE(json_agg(t), '[]'::json)
+  INTO result
+  FROM (
+    SELECT 
+      m.*
+    FROM public.messages m
+    WHERE m.room_id = p_room_id
+      -- Keyser Pagination logic:
+      AND (p_before_created_at IS NULL OR m.created_at < p_before_created_at)
+    ORDER BY m.created_at DESC
+    LIMIT p_limit
+  ) t;
+
+  RETURN result;
+END;
+$$;
 
 -- ============================================
 -- 5. TRIGGERS
@@ -322,15 +384,27 @@ ALTER TABLE public.friend_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.room_invitations ENABLE ROW LEVEL SECURITY;
 
 -- Users
-CREATE POLICY "Public profiles are viewable by everyone" ON public.users FOR SELECT USING (true);
-CREATE POLICY "Users can update own profile" ON public.users FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Profiles are public" ON public.users FOR SELECT USING (true);
+CREATE POLICY "Users can update own profile" ON public.users 
+FOR UPDATE TO authenticated 
+USING (auth.uid() = id) 
+WITH CHECK (auth.uid() = id);
+
+-- Check if user is a member of the room (STABLE function for RLS optimization)
+CREATE OR REPLACE FUNCTION is_room_member(room_id UUID)
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS(
+    SELECT 1 FROM public.room_members 
+    WHERE room_id = $1 AND user_id = auth.uid()
+  );
+$$ LANGUAGE sql STABLE SECURITY DEFINER;
 
 -- Messages
 CREATE POLICY "Users can view messages in their rooms" ON public.messages FOR SELECT USING (
-  EXISTS (SELECT 1 FROM public.room_members WHERE room_id = messages.room_id AND user_id = auth.uid())
+  is_room_member(room_id)
 );
 CREATE POLICY "Users can insert messages in their rooms" ON public.messages FOR INSERT WITH CHECK (
-  EXISTS (SELECT 1 FROM public.room_members WHERE room_id = messages.room_id AND user_id = auth.uid())
+  is_room_member(room_id)
 );
 CREATE POLICY "Users can delete own messages" ON public.messages FOR DELETE USING (auth.uid() = user_id);
 
@@ -339,16 +413,65 @@ CREATE POLICY "Members see private rooms" ON public.rooms FOR SELECT USING (
   id IN (SELECT room_id FROM public.room_members WHERE user_id = auth.uid())
 );
 CREATE POLICY "Auth users create rooms" ON public.rooms FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Owners can update rooms" ON public.rooms FOR UPDATE USING (auth.uid() = created_by);
 
 -- Room Members
 CREATE POLICY "View members" ON public.room_members FOR SELECT USING (
   EXISTS (SELECT 1 FROM public.room_members rm WHERE rm.room_id = room_members.room_id AND rm.user_id = auth.uid())
 );
 CREATE POLICY "Self join" ON public.room_members FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Owners can add members" ON public.room_members FOR INSERT WITH CHECK (
+  EXISTS (SELECT 1 FROM public.rooms r WHERE r.id = room_id AND r.created_by = auth.uid())
+);
+CREATE POLICY "Owners or self can remove members" ON public.room_members FOR DELETE USING (
+  EXISTS (SELECT 1 FROM public.rooms r WHERE r.id = room_id AND r.created_by = auth.uid()) OR auth.uid() = user_id
+);
+
+-- ============================================
+-- 6.5 STORAGE SETUP (chat-files & avatars)
+-- ============================================
+
+-- Create buckets if not exist
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('chat-files', 'chat-files', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('avatars', 'avatars', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- RLS for chat-files (Private/Room based)
+CREATE POLICY "Users can upload chat files" ON storage.objects
+FOR INSERT TO authenticated WITH CHECK (bucket_id = 'chat-files');
+
+CREATE POLICY "Users can view chat files" ON storage.objects
+FOR SELECT TO authenticated USING (bucket_id = 'chat-files');
+
+CREATE POLICY "Users can delete own chat files" ON storage.objects
+FOR DELETE TO authenticated USING (bucket_id = 'chat-files' AND owner = auth.uid());
+
+-- RLS for avatars (Publicly readable, Owner writeable)
+DROP POLICY IF EXISTS "Avatars are public" ON storage.objects;
+DROP POLICY IF EXISTS "Users can upload their own avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their own avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their own avatar" ON storage.objects;
+
+CREATE POLICY "avatar_public_read" ON storage.objects
+FOR SELECT TO public USING (bucket_id = 'avatars');
+
+CREATE POLICY "avatar_auth_insert" ON storage.objects
+FOR INSERT TO authenticated WITH CHECK (bucket_id = 'avatars');
+
+CREATE POLICY "avatar_auth_update" ON storage.objects
+FOR UPDATE TO authenticated USING (bucket_id = 'avatars');
+
+CREATE POLICY "avatar_auth_delete" ON storage.objects
+FOR DELETE TO authenticated USING (bucket_id = 'avatars');
 
 -- ============================================
 -- 7. REALTIME ENABLEMENT
 -- ============================================
+ALTER PUBLICATION supabase_realtime ADD TABLE public.users;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.room_members;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.friend_requests;
