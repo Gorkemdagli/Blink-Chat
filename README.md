@@ -1,10 +1,10 @@
 <div align="center">
 
-# ChatApp
+# Blink-Chat
 
 **Gerçek zamanlı, güvenli ve modern bir mesajlaşma uygulaması.**
 
-[![Status](https://img.shields.io/badge/status-active-4ade80?style=flat-square)](https://github.com/Gorkemdagli/ChatApp-React-Node-)
+[![Status](https://img.shields.io/badge/status-active-4ade80?style=flat-square)](https://github.com/Gorkemdagli/Blink-Chat)
 [![License](https://img.shields.io/badge/license-MIT-60a5fa?style=flat-square)](LICENSE)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react)](https://react.dev)
 [![Node.js](https://img.shields.io/badge/Node.js-Express-339933?style=flat-square&logo=node.js)](https://nodejs.org)
@@ -16,7 +16,7 @@
 
 ## Ne Yapar?
 
-ChatApp; anlık mesajlaşma, dosya paylaşımı ve okundu bilgisi gibi modern iletişim ihtiyaçlarını karşılayan bir web uygulamasıdır. Hesap oluşturun, arkadaş ekleyin, her cihazdan mesajlaşın.
+Blink-Chat; anlık mesajlaşma, dosya paylaşımı ve okundu bilgisi gibi modern iletişim ihtiyaçlarını karşılayan bir web uygulamasıdır. Hesap oluşturun, arkadaş ekleyin, her cihazdan mesajlaşın.
 
 ### Özellikler
 
@@ -41,8 +41,8 @@ En kolay yol: Docker ile tek komutta çalıştırmak.
 
 ```bash
 # 1. Projeyi klonlayın
-git clone https://github.com/Gorkemdagli/ChatApp-React-Node-.git
-cd ChatApp-React-Node-
+git clone https://github.com/Gorkemdagli/Blink-Chat.git
+cd Blink-Chat
 
 # 2. Ortam değişkenlerini ayarlayın (detaylar aşağıda)
 cp backend/.env.example backend/.env
@@ -87,7 +87,7 @@ Aşağıdaki bölüm yerel geliştirme ortamını kurmak isteyen geliştiriciler
 ### Proje Yapısı
 
 ```
-ChatApp-React-Node-/
+Blink-Chat/
 ├── backend/                 # Node.js + Express + Socket.IO API
 │   ├── config/              # Redis, Supabase, Multer yapılandırmaları
 │   ├── controllers/         # İnce HTTP kontrolcüleri (iş mantığı yok)

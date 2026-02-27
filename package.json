@@ -1,7 +1,7 @@
 {
-    "name": "chat-app-root",
+    "name": "blink-chat",
     "version": "1.0.0",
-    "description": "Root configuration for Chat App",
+    "description": "Root configuration for Blink-Chat",
     "scripts": {
         "build": "docker-compose --env-file ./backend/.env up --build",
         "down": "docker-compose down -v",
