@@ -14,6 +14,15 @@ jest.mock('node-cron', () => ({
 
 // ─── extractStoragePath Unit Tests ───────────────────────────────────────────
 describe('extractStoragePath — Path Traversal Guard', () => {
+    let consoleErrorSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+        consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
+    });
+
+    afterEach(() => {
+        consoleErrorSpy.mockRestore();
+    });
 
     // ✅ Valid paths
     it('extracts a simple file path', () => {

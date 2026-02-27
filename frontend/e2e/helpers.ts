@@ -26,7 +26,7 @@ export const selectors = {
         startButton: 'text=Hemen Başla',
         loginButton: 'text=Giriş Yap',
         featuresButton: 'text=Özellikler',
-        logo: 'text=ChatApp',
+        logo: 'text=Blink',
     },
 
     // Auth

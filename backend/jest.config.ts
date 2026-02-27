@@ -3,10 +3,12 @@ import type { Config } from 'jest';
 const config: Config = {
     preset: 'ts-jest',
     testEnvironment: 'node',
-    forceExit: true,
     setupFiles: ['<rootDir>/tests/setup.ts'],
     modulePathIgnorePatterns: ['<rootDir>/dist/'],
     testTimeout: 30000,
+    transform: {
+        '^.+\\.tsx?$': ['ts-jest', { isolatedModules: true }],
+    },
     collectCoverageFrom: [
         'services/**/*.ts',
         'controllers/**/*.ts',

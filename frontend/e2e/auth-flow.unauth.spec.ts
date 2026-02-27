@@ -18,7 +18,7 @@ test.describe('Landing Page', () => {
         await expect(page.locator(selectors.landing.logo).first()).toBeVisible();
 
         // Hero headline
-        await expect(page.locator('text=Özgürce Sohbet Et')).toBeVisible();
+        await expect(page.locator('text=Gerçek zamanlı sohbet.')).toBeVisible();
 
         // Primary CTA
         const startBtn = page.locator(selectors.landing.startButton).first();
@@ -30,7 +30,7 @@ test.describe('Landing Page', () => {
         if (await featuresBtn.isVisible()) {
             await featuresBtn.click();
             // Features section or page should be visible
-            await expect(page.locator('text=Grup Sohbetleri')).toBeVisible({ timeout: 5000 });
+            await expect(page.locator('text=Grup Sohbetleri').first()).toBeVisible({ timeout: 5000 });
         }
     });
 

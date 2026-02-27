@@ -31,8 +31,8 @@ const logger = winston.createLogger({
     ]
 }) as winston.Logger & { stream: { write: (message: string) => void } };
 
-// If we're not in production then log to the `console` with the format:
-if (process.env.NODE_ENV !== 'production') {
+// If we're not in production and not in test, log to the `console` with the format:
+if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
     logger.add(new winston.transports.Console({
         format: winston.format.combine(
             winston.format.colorize(),
