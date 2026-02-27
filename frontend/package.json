@@ -8,7 +8,7 @@
     "build": "vite build",
     "build:prod": "vite build",
     "lint": "eslint .",
-    "test": "vitest",
+    "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "preview": "vite preview",
     "e2e": "playwright test",

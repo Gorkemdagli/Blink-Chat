@@ -57,8 +57,8 @@ export const selectors = {
 
     // Navigation
     nav: {
-        friendsTab: 'text=Arkadaşlar',
-        roomsTab: 'text=Sohbetler',
+        friendsTab: 'button#arkadaslar-tab',
+        roomsTab: 'button#odalar-tab',
         addFriend: 'text=Arkadaş Ekle',
         createGroup: 'text=Grup Oluştur',
     },

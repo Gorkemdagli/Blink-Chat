@@ -35,6 +35,7 @@ export default defineConfig({
                 ...devices['Desktop Chrome'],
                 storageState: './e2e/.auth/user.json',
             },
+            testIgnore: /.*\.unauth\.spec\.ts/,
             dependencies: ['setup'],
         },
         // Unauthenticated tests (landing, login, register)
