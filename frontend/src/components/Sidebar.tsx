@@ -261,7 +261,7 @@ export default function Sidebar({
                     username: friend.friend_username || friend.username,
                     email: friend.friend_email || friend.email,
                     user_code: friend.friend_code || friend.user_code,
-                    avatar_url: friend.friend_avatar || friend.avatar
+                    avatar_url: friend.avatar_url || friend.friend_avatar || friend.avatar
                   } as User
                   return (
                     <button

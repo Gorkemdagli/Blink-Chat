@@ -8,8 +8,12 @@ const ALLOWED_FILE_EXTENSIONS = [
 export const MessageDataSchema = z.object({
     roomId: z.string().min(1, 'Room ID is required'),
     userId: z.string().min(1, 'User ID is required'),
-    content: z.string(),
-    fileUrl: z.string().url().optional().nullable(),
+    content: z.string().max(1000, "Mesaj 1000 karakterden uzun olamaz"),
+    fileUrl: z.string().url().optional().nullable().refine(url => {
+        if (!url) return true;
+        const supabaseUrl = process.env.SUPABASE_URL || '';
+        return url.startsWith(`${supabaseUrl}/storage/`);
+    }, { message: "Dosya URL'i yalnızca Supabase storage'dan olabilir" }),
     messageType: z.enum(['text', 'image', 'file']).optional().default('text'),
     fileName: z.string().optional().nullable().refine(name => {
         if (!name) return true;

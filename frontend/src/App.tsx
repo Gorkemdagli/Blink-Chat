@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Session } from '@supabase/supabase-js'
 import { supabase } from './supabaseClient'
+import { setSocketToken } from './socket'
 import Auth from './components/Auth'
 import Chat from './components/Chat'
 
@@ -118,6 +119,7 @@ function App() {
         } else if (session && isSessionValid(session)) {
           // Update last active time
           updateLastActive(session)
+          setSocketToken(session.access_token)
           setSession(session)
           setLoading(false)
         } else {
@@ -144,6 +146,7 @@ function App() {
       console.log('Auth state changed:', event, session ? 'has session' : 'no session')
 
       if (event === 'SIGNED_OUT' || !session) {
+        setSocketToken(null)
         setSession(null)
         setLoading(false)
         // Clear localStorage on sign out
@@ -157,6 +160,7 @@ function App() {
         // New sign in - update last active and set session
         if (isSessionValid(session)) {
           updateLastActive(session)
+          setSocketToken(session.access_token)
           setSession(session)
           setLoading(false)
         } else {

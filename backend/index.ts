@@ -21,6 +21,9 @@ import healthRoutes from './routes/health';
 
 const app = express();
 
+// Trust proxy (required for Render/Vercel — correct IP for rate limiting)
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(cors(corsOptions));
 // Use morgan for HTTP request logging, piping to winston
@@ -48,6 +51,7 @@ const io = new Server(server, {
         origin: process.env.FRONTEND_URL || "http://localhost:5173",
         methods: ["GET", "POST"]
     },
+    transports: ['websocket', 'polling'],
     pingTimeout: 60000,
     pingInterval: 25000
 });

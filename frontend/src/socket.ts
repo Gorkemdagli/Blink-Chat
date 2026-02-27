@@ -4,25 +4,40 @@ import io, { Socket } from 'socket.io-client'
 let socket: Socket | null = null
 let connectionCount = 0
 let isInitializing = false
+let currentToken: string | null = null
+
+/**
+ * Mevcut access token'ı güncelle.
+ * Socket bağlantısı zaten kuruluysa, yeni token ile yeniden bağlan.
+ */
+export const setSocketToken = (token: string | null) => {
+    currentToken = token
+
+    // Eğer token değiştiyse ve aktif bağlantı varsa, yeniden bağlan
+    if (socket && token && socket.connected) {
+        socket.auth = { token }
+        socket.disconnect().connect()
+    }
+}
 
 export const getSocket = (): Socket => {
-    // Eğer zaten initialize ediliyor ise bekle
     if (isInitializing && socket) {
-        console.log('⏳ Socket already initializing, returning existing...')
         return socket
     }
 
     if (!socket || !socket.connected) {
-        // Eğer socket yoksa veya bağlı değilse yeni oluştur
         if (!socket) {
             isInitializing = true
-            socket = io('http://localhost:3000', {
+            socket = io(import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000', {
                 reconnection: true,
                 reconnectionDelay: 1000,
                 reconnectionAttempts: 5,
                 autoConnect: true,
-                transports: ['websocket', 'polling'], // WebSocket öncelikli
-                forceNew: false // Mevcut bağlantıyı kullan
+                transports: ['websocket', 'polling'],
+                forceNew: false,
+                auth: {
+                    token: currentToken
+                }
             })
 
             socket.on('connect', () => {
@@ -40,8 +55,10 @@ export const getSocket = (): Socket => {
                 console.error('🔌 Socket.IO connection error:', error.message)
             })
         } else if (!socket.connected) {
-            // Socket var ama bağlı değil, yeniden bağlan
-            console.log('🔄 Reconnecting existing socket...')
+            // Token güncelleyip yeniden bağlan
+            if (currentToken) {
+                socket.auth = { token: currentToken }
+            }
             socket.connect()
         }
     }
@@ -50,10 +67,10 @@ export const getSocket = (): Socket => {
 
 export const disconnectSocket = () => {
     if (socket) {
-        console.log('🔌 Socket.IO disconnecting manually')
         socket.disconnect()
         socket = null
         connectionCount = 0
+        currentToken = null
     }
 }
 
