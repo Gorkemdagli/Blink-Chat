@@ -1,13 +1,30 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon-active.svg" id="app-favicon" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blink</title>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+  <script>
+    document.addEventListener('visibilitychange', () => {
+      const favicon = document.getElementById('app-favicon');
+      if (!favicon) return;
+
+      if (document.hidden) {
+        favicon.setAttribute('href', '/favicon-inactive.svg');
+        document.title = 'Uyuyor... | Blink';
+      } else {
+        favicon.setAttribute('href', '/favicon-active.svg');
+        document.title = 'Blink';
+      }
+    });
+  </script>
+</body>
+
 </html>

@@ -24,11 +24,41 @@ vi.mock('@emoji-mart/react', () => ({
 }));
 
 vi.mock('../socket', () => ({
-    default: {
+    getSocket: vi.fn(() => ({
         emit: vi.fn(),
         on: vi.fn(),
-        off: vi.fn()
-    }
+        off: vi.fn(),
+        connected: true
+    }))
+}));
+
+vi.mock('../components/ChatHeader', () => ({
+    default: () => <div data-testid="chat-header">ChatHeader</div>
+}));
+vi.mock('../components/MessageList', () => ({
+    default: (props: any) => (
+        <div data-testid="message-list">
+            {props.messages.length === 0 ? 'Henüz mesaj yok' : props.messages.map((m: any) => (
+                <div key={m.id}>
+                    {m.user?.username && <span>{m.user.username}</span>}
+                    <div>{m.content}</div>
+                </div>
+            ))}
+        </div>
+    )
+}));
+vi.mock('../components/MessageInput', () => ({
+    default: (props: any) => (
+        <div data-testid="message-input">
+            <input placeholder="Mesaj yaz..." value={props.inputValue} onChange={props.handleInputChange} />
+        </div>
+    )
+}));
+vi.mock('../components/ProfileModal', () => ({
+    default: () => <div data-testid="profile-modal">ProfileModal</div>
+}));
+vi.mock('../components/GroupInfoModal', () => ({
+    default: () => <div data-testid="group-info-modal">GroupInfoModal</div>
 }));
 
 describe('ChatWindow Bileşeni', () => {

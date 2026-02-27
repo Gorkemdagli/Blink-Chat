@@ -92,9 +92,10 @@ export default function MessageInput({
                         </div>
                         <button
                             onClick={() => setSelectedFile(null)}
-                            className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full text-gray-400 hover:text-red-500 transition-all"
+                            className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full text-gray-400 hover:text-red-500 transition-all focus:outline-none focus:ring-2 focus:ring-red-500"
+                            aria-label="Seçili dosyayı kaldır"
                         >
-                            <X size={18} />
+                            <X size={18} aria-hidden="true" />
                         </button>
                     </div>
                 )}
@@ -102,6 +103,7 @@ export default function MessageInput({
                 <input
                     type="text"
                     placeholder="Mesaj yaz..."
+                    aria-label="Mesaj yazma alanı"
                     value={inputValue}
                     onChange={handleInputChange}
                     onKeyDown={handleKeyPress}
@@ -113,19 +115,25 @@ export default function MessageInput({
                     <button
                         data-attach-button
                         onClick={() => setShowAttachMenu(!showAttachMenu)}
-                        className={`p-1.5 rounded-full hover:bg-white dark:hover:bg-slate-700 transition-all ${showAttachMenu ? 'text-sky-500 bg-white dark:bg-slate-700' : 'text-gray-400 dark:text-gray-500 hover:text-sky-500'}`}
+                        aria-expanded={showAttachMenu}
+                        aria-haspopup="menu"
+                        aria-label="Dosya Ekleme Menüsünü Aç"
+                        className={`p-1.5 rounded-full hover:bg-white dark:hover:bg-slate-700 transition-all focus:outline-none focus:ring-2 focus:ring-sky-500 ${showAttachMenu ? 'text-sky-500 bg-white dark:bg-slate-700' : 'text-gray-400 dark:text-gray-500 hover:text-sky-500'}`}
                         title="Dosya Ekle"
                     >
-                        <Paperclip size={20} />
+                        <Paperclip size={20} aria-hidden="true" />
                     </button>
 
                     {/* Attachment Menu */}
                     {showAttachMenu && (
                         <div
                             ref={attachMenuRef}
+                            role="menu"
+                            aria-label="Dosya Ekleme Seçenekleri"
                             className="absolute bottom-full right-2 md:right-6 mb-2 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-100 dark:border-slate-700 p-2 flex flex-col gap-1 min-w-[140px] z-50 animate-in fade-in slide-in-from-bottom-2"
                         >
                             <button
+                                role="menuitem"
                                 onClick={() => {
                                     setShowAttachMenu(false)
                                     if (fileInputRef.current) {
@@ -133,12 +141,13 @@ export default function MessageInput({
                                         fileInputRef.current.click()
                                     }
                                 }}
-                                className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md text-sm text-gray-700 dark:text-gray-200 transition-colors w-full text-left font-medium"
+                                className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md text-sm text-gray-700 dark:text-gray-200 transition-colors w-full text-left font-medium focus:outline-none focus:bg-gray-100 dark:focus:bg-slate-600"
                             >
-                                <ImageIcon size={16} className="text-purple-500" />
+                                <ImageIcon size={16} className="text-purple-500" aria-hidden="true" />
                                 <span>Görsel Gönder</span>
                             </button>
                             <button
+                                role="menuitem"
                                 onClick={() => {
                                     setShowAttachMenu(false)
                                     if (fileInputRef.current) {
@@ -146,9 +155,9 @@ export default function MessageInput({
                                         fileInputRef.current.click()
                                     }
                                 }}
-                                className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md text-sm text-gray-700 dark:text-gray-200 transition-colors w-full text-left font-medium"
+                                className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md text-sm text-gray-700 dark:text-gray-200 transition-colors w-full text-left font-medium focus:outline-none focus:bg-gray-100 dark:focus:bg-slate-600"
                             >
-                                <FileIcon size={16} className="text-blue-500" />
+                                <FileIcon size={16} className="text-blue-500" aria-hidden="true" />
                                 <span>Dosya Gönder</span>
                             </button>
                         </div>
@@ -157,22 +166,25 @@ export default function MessageInput({
                     <button
                         data-emoji-button
                         onClick={toggleEmojiPicker}
-                        className={`p-1.5 rounded-full hover:bg-white dark:hover:bg-slate-700 transition-all ${showEmojiPicker ? 'text-yellow-500 bg-white dark:bg-slate-700' : 'text-gray-400 dark:text-gray-500 hover:text-yellow-500'}`}
+                        aria-expanded={showEmojiPicker}
+                        aria-label="Emoji Seçiciyi Aç"
+                        className={`p-1.5 rounded-full hover:bg-white dark:hover:bg-slate-700 transition-all focus:outline-none focus:ring-2 focus:ring-yellow-500 ${showEmojiPicker ? 'text-yellow-500 bg-white dark:bg-slate-700' : 'text-gray-400 dark:text-gray-500 hover:text-yellow-500'}`}
                     >
-                        <Smile size={20} />
+                        <Smile size={20} aria-hidden="true" />
                     </button>
                     <button
                         onClick={handleSend}
+                        aria-label="Mesajı Gönder"
                         disabled={(!inputValue.trim() && !selectedFile) || isUploading}
-                        className={`p-1.5 md:p-2 rounded-lg transition-all active:scale-95 flex items-center justify-center min-w-[36px] md:min-w-[40px] ${(inputValue.trim() || selectedFile) && !isUploading
+                        className={`p-1.5 md:p-2 rounded-lg transition-all active:scale-95 flex items-center justify-center min-w-[36px] md:min-w-[40px] focus:outline-none focus:ring-2 focus:ring-sky-500 ${(inputValue.trim() || selectedFile) && !isUploading
                             ? 'bg-sky-500 text-white shadow-lg shadow-sky-100 dark:shadow-none hover:bg-sky-600'
                             : 'bg-gray-200 dark:bg-slate-700 text-gray-400 dark:text-gray-600 cursor-not-allowed'
                             }`}
                     >
                         {isUploading ? (
-                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-label="Yükleniyor"></div>
                         ) : (
-                            <Send size={18} className="md:w-5 md:h-5 translate-x-0.5" />
+                            <Send size={18} className="md:w-5 md:h-5 translate-x-0.5" aria-hidden="true" />
                         )}
                     </button>
                 </div>

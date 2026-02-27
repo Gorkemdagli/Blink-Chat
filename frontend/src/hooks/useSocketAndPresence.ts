@@ -49,7 +49,8 @@ export function useSocketAndPresence(session: Session, state: ChatState, dataFun
         // Global Socket.IO listener
         const socket = getSocket()
 
-        const handleGlobalNewMessage = (messageWithUser: any) => {
+        const handleUnifiedNewMessage = (messageWithUser: any) => {
+            // 1. Sidebar güncelleme (son mesaj)
             setLastMessages((prev: { [key: string]: Message }) => ({
                 ...prev,
                 [messageWithUser.room_id]: {
@@ -63,25 +64,38 @@ export function useSocketAndPresence(session: Session, state: ChatState, dataFun
                 } as Message
             }))
 
-            if (messageWithUser.user_id === session.user.id) {
-                return
+            const currentRoomId = currentRoomRef.current?.id
+
+            // 2. Aktif oda ise mesaj listesini güncelle
+            if (messageWithUser.room_id === currentRoomId) {
+                setMessages((prev: Message[]) => {
+                    if (prev.some(msg => msg.id === messageWithUser.id)) return prev
+                    return [...prev, messageWithUser]
+                })
             }
 
-            const openRoom = currentRoomRef.current
-            if (!openRoom || openRoom.id !== messageWithUser.room_id) {
-                const lastOpenKey = `lastOpen_${messageWithUser.room_id}`
-                const lastOpen = localStorage.getItem(lastOpenKey)
-
-                if (!lastOpen || new Date(messageWithUser.created_at) > new Date(lastOpen)) {
-                    setUnreadCounts((prev: UnreadCounts) => ({
-                        ...prev,
-                        [messageWithUser.room_id]: (prev[messageWithUser.room_id] || 0) + 1
-                    }))
-                }
+            // 3. Başka bir oda ise ve mesaj benden değilse okunmamış sayısını artır
+            if (messageWithUser.user_id !== session.user.id && messageWithUser.room_id !== currentRoomId) {
+                setUnreadCounts((prev: UnreadCounts) => ({
+                    ...prev,
+                    [messageWithUser.room_id]: (prev[messageWithUser.room_id] || 0) + 1
+                }))
             }
         }
 
-        socket.on('globalNewMessage', handleGlobalNewMessage)
+        socket.on('newMessage', handleUnifiedNewMessage)
+
+        // Okundu bilgisini de global dinliyoruz (tüm cihazlarda sync için veya sidebar için)
+        socket.on('messages_read', ({ roomId }: { roomId: string }) => {
+            // Eğer aktif oda ise görkemli mavi tikler
+            if (roomId === currentRoomRef.current?.id) {
+                setMessages((prev: Message[]) => {
+                    const hasUnread = prev.some(msg => msg.user_id === session.user.id && msg.status !== 'read')
+                    if (!hasUnread) return prev
+                    return prev.map(msg => (msg.user_id === session.user.id && msg.status !== 'read') ? { ...msg, status: 'read' } : msg)
+                })
+            }
+        })
 
         // Realtime channels için referanslar
         let globalChannel: any = null
@@ -281,7 +295,8 @@ export function useSocketAndPresence(session: Session, state: ChatState, dataFun
         }, 500) // 500ms gecikme - data fetch'lerin önce tamamlanması için
 
         return () => {
-            socket.off('globalNewMessage', handleGlobalNewMessage)
+            socket.off('newMessage', handleUnifiedNewMessage)
+            socket.off('messages_read')
             if (setupTimeout) clearTimeout(setupTimeout)
             if (globalChannel) supabase.removeChannel(globalChannel)
             if (heartbeatInterval) clearInterval(heartbeatInterval)
@@ -326,67 +341,23 @@ export function useSocketAndPresence(session: Session, state: ChatState, dataFun
                 })
                 .subscribe()
 
-            const socket = getSocket()
-            socket.emit('joinRoom', currentRoom.id)
-
-            const handleRoomNewMessage = (messageWithUser: any) => {
-                if (messageWithUser.room_id !== currentRoom.id) return
-
-                setLastMessages((prev: { [key: string]: Message }) => ({
-                    ...prev,
-                    [messageWithUser.room_id]: {
-                        id: messageWithUser.id,
-                        content: messageWithUser.content,
-                        message_type: messageWithUser.message_type,
-                        user_id: messageWithUser.user_id,
-                        created_at: messageWithUser.created_at,
-                        user: messageWithUser.user || messageWithUser.userData,
-                        room_id: messageWithUser.room_id
-                    } as Message
-                }))
-
-                setMessages((prev: Message[]) => {
-                    const exists = prev.some(msg => msg.id === messageWithUser.id)
-                    if (exists) return prev
-
-                    const newMessages = [...prev, messageWithUser]
-                    const uniqueMessages: Message[] = []
-                    const seenIds = new Set()
-                    for (let i = newMessages.length - 1; i >= 0; i--) {
-                        if (!seenIds.has(newMessages[i].id)) {
-                            seenIds.add(newMessages[i].id)
-                            uniqueMessages.unshift(newMessages[i])
-                        }
-                    }
-                    return uniqueMessages
-                })
-            }
-
-            socket.on('newMessage', handleRoomNewMessage)
-
-            socket.on('messages_read', ({ roomId }: { roomId: string }) => {
-                if (roomId !== currentRoom.id) return
-                setMessages((prev: Message[]) => {
-                    const hasUnread = prev.some(msg => msg.user_id === session.user.id && msg.status !== 'read')
-                    if (!hasUnread) return prev
-                    return prev.map(msg => {
-                        if (msg.user_id === session.user.id && msg.status !== 'read') {
-                            return { ...msg, status: 'read' }
-                        }
-                        return msg
-                    })
-                })
-            })
-
             return () => {
                 supabase.removeChannel(channel)
-                socket.off('newMessage', handleRoomNewMessage)
-                socket.off('messages_read')
-                socket.emit('leaveRoom', currentRoom.id)
             }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentRoom, session.user.id, setUnreadCounts, fetchMessages, setMessages, setLastMessages, setCurrentRoom])
+
+    // Odalar yüklendiğinde tüm odalara join ol (Socket.IO room-based broadcast için)
+    useEffect(() => {
+        if (state.rooms.length === 0) return
+        const socket = getSocket()
+        state.rooms.forEach(room => {
+            if (room.id && !room.is_provisional) {
+                socket.emit('joinRoom', room.id)
+            }
+        })
+    }, [state.rooms])
 
     useEffect(() => {
         setRooms((prevRooms: Room[]) => prevRooms.map(room => {

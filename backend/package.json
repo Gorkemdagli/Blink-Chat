@@ -8,15 +8,12 @@
     "dev": "nodemon index.ts",
     "build": "tsc",
     "test": "jest",
+    "test:coverage": "jest --coverage",
     "seed:list": "ts-node seedTestMessages.ts list",
-    "seed:help": "ts-node seedTestMessages.ts"
-  },
-  "jest": {
-    "testEnvironment": "node",
-    "forceExit": true,
-    "setupFiles": [
-      "<rootDir>/tests/setup.js"
-    ]
+    "seed:help": "ts-node seedTestMessages.ts",
+    "migrate:up": "node-pg-migrate -m migrations -j ts up",
+    "migrate:down": "node-pg-migrate -m migrations -j ts down",
+    "migrate:create": "node-pg-migrate -m migrations -j ts create"
   },
   "keywords": [],
   "author": "",
@@ -32,25 +29,32 @@
     "ioredis": "^5.9.0",
     "morgan": "^1.10.1",
     "node-cron": "^4.2.1",
+    "node-pg-migrate": "^8.0.4",
+    "pg": "^8.19.0",
     "socket.io": "^4.8.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "winston": "^3.19.0",
-    "xss": "^1.0.15"
+    "xss": "^1.0.15",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
     "@types/morgan": "^1.9.10",
     "@types/node": "^25.2.3",
     "@types/node-cron": "^3.0.11",
+    "@types/pg": "^8.16.0",
     "@types/socket.io": "^3.0.1",
+    "@types/supertest": "^7.2.0",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
     "jest": "^30.2.0",
     "nodemon": "^3.1.11",
     "socket.io-client": "^4.8.3",
     "supertest": "^7.1.4",
+    "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }

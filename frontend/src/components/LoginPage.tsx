@@ -104,11 +104,9 @@ export default function LoginPage({ onBack, onLogin, onGoToRegister }: LoginPage
 
             <div className="w-full max-w-[440px] z-10">
                 <div className="text-center mb-10">
-                    <div className="inline-flex w-16 h-16 bg-blue-600 rounded-2xl items-center justify-center shadow-2xl shadow-blue-200 dark:shadow-none mb-6">
-                        <span className="text-white font-black text-3xl">C</span>
-                    </div>
+                    <img src="/favicon-active.svg" alt="Blink Logo" className="inline-block w-16 h-16 mb-6" />
                     <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight mb-2">Hoş Geldiniz</h1>
-                    <p className="text-slate-500 dark:text-gray-400 font-medium">ChatApp dünyasına giriş yapın ve sohbete başlayın.</p>
+                    <p className="text-slate-500 dark:text-gray-400 font-medium">Blink dünyasına giriş yapın ve sohbete başlayın.</p>
                 </div>
 
                 <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[32px] p-8 md:p-10 shadow-2xl shadow-slate-200/50 dark:shadow-none transition-colors">

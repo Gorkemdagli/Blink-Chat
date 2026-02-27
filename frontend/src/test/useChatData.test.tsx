@@ -108,11 +108,14 @@ describe('useChatData Hook (ULTRATHINK Tests)', () => {
             setIsLoadingMoreMessages: vi.fn(),
             setHasMoreMessages: vi.fn(),
             setOldestMessageId: vi.fn(),
+            setOldestMessageDate: vi.fn(),
             currentRoom: null,
             oldestMessageId: null,
+            oldestMessageDate: null,
             hasMoreMessages: false,
             isLoadingMoreMessages: false,
             userCacheRef: { current: new Map() },
+            deletedMessageIdsRef: { current: new Set() },
             fetchRoomsTimeoutRef: { current: null },
             cacheUsers: vi.fn((users) => {
                 if (!users) return
@@ -187,8 +190,11 @@ describe('useChatData Hook (ULTRATHINK Tests)', () => {
             { id: 1, content: 'Hi', user_id: 'u1', created_at: '2023-01-01' } // Duplicate
         ]
 
-        messagesBuilder.then.mockImplementation((resolve: any) => resolve({ data: mockMessages, error: null }))
-        messageDeletionsBuilder.then.mockImplementation((resolve: any) => resolve({ data: [], error: null }))
+        // @ts-ignore
+        supabase.rpc = vi.fn((fn) => {
+            if (fn === 'get_chat_messages') return Promise.resolve({ data: mockMessages, error: null })
+            return Promise.resolve({ data: null, error: null })
+        })
 
         // Mock user cache hit
         mockState.userCacheRef.current.set('u1', { id: 'u1', username: 'TestUser' })

@@ -41,54 +41,71 @@ export default function ChatInterfacePreview() {
     { id: 'f7', name: 'Mehmet Şahin', status: 'offline', lastSeen: '5 dakika önce', avatarColor: 'bg-indigo-100 text-indigo-700' },
   ]
 
-  // Mock Messages Data - Group Chat (Proje Ekibi)
-  const groupMessages = [
-    { id: 'm1', sender: 'ahmet', senderName: 'Ahmet Yılmaz', text: 'Merhaba herkese! Bugünkü toplantı için hazır mısınız?', timestamp: '09:15', isMe: false },
-    { id: 'm2', sender: 'me', senderName: 'Sen', text: 'Evet hazırım, gündem maddelerini paylaşabilir misin?', timestamp: '09:16', isMe: true },
-    { id: 'm3', sender: 'zeynep', senderName: 'Zeynep Su', text: 'Ben de hazırım. Toplantı notlarını önceden göndermiştiniz, çok faydalı oldu.', timestamp: '09:17', isMe: false },
-    { id: 'm4', sender: 'canberk', senderName: 'Canberk Öz', text: 'Yeni özellik için mockup\'lar hazır. Feedback bekliyorum.', timestamp: '09:20', isMe: false },
-    { id: 'm5', sender: 'me', senderName: 'Sen', text: 'Harika görünüyor! Renk paleti çok uyumlu olmuş.', timestamp: '09:22', isMe: true },
-    { id: 'm6', sender: 'ahmet', senderName: 'Ahmet Yılmaz', text: 'Evet, tasarım ekibimiz gerçekten iyi iş çıkarmış. Devam edelim mi?', timestamp: '09:25', isMe: false },
-    { id: 'm7', sender: 'zeynep', senderName: 'Zeynep Su', text: 'Kesinlikle! Hemen implementasyona başlayabiliriz.', timestamp: '09:26', isMe: false },
-    { id: 'm8', sender: 'me', senderName: 'Sen', text: 'Mükemmel! Toplantıda detayları konuşuruz.', timestamp: '09:27', isMe: true },
-    { id: 'm9', sender: 'canberk', senderName: 'Canberk Öz', text: 'Toplantı notlarını paylaştım, kontrol edebilir misiniz?', timestamp: '14:32', isMe: false },
-  ]
-
-  // Mock Messages Data - Direct Message (Ahmet Yılmaz)
-  const directMessages = [
-    { id: 'dm1', sender: 'ahmet', senderName: 'Ahmet Yılmaz', text: 'Merhaba! Yarınki toplantıya katılabilecek misin?', timestamp: '10:30', isMe: false },
-    { id: 'dm2', sender: 'me', senderName: 'Sen', text: 'Evet, katılacağım. Saat kaçta başlıyor?', timestamp: '10:32', isMe: true },
-    { id: 'dm3', sender: 'ahmet', senderName: 'Ahmet Yılmaz', text: 'Saat 14:00\'da başlayacak. Konferans salonunda olacağız.', timestamp: '10:33', isMe: false },
-    { id: 'dm4', sender: 'me', senderName: 'Sen', text: 'Tamam, not aldım. Görüşürüz!', timestamp: '10:35', isMe: true },
-    { id: 'dm5', sender: 'ahmet', senderName: 'Ahmet Yılmaz', text: 'Harika! Yarın görüşürüz o zaman.', timestamp: '10:36', isMe: false },
-  ]
+  // Mock Messages Data
+  const conversations: Record<string, any[]> = {
+    '1': [
+      { id: 'm1', sender: 'ahmet', senderName: 'Ahmet Yılmaz', text: 'Merhaba herkese! Bugünkü toplantı için hazır mısınız?', timestamp: '09:15', isMe: false },
+      { id: 'm2', sender: 'me', senderName: 'Sen', text: 'Evet hazırım, gündem maddelerini paylaşabilir misin?', timestamp: '09:16', isMe: true },
+      { id: 'm3', sender: 'zeynep', senderName: 'Zeynep Su', text: 'Ben de hazırım. Toplantı notlarını önceden göndermiştiniz, çok faydalı oldu.', timestamp: '09:17', isMe: false },
+      { id: 'm4', sender: 'canberk', senderName: 'Canberk Öz', text: 'Yeni özellik için mockup\'lar hazır. Feedback bekliyorum.', timestamp: '09:20', isMe: false },
+      { id: 'm5', sender: 'me', senderName: 'Sen', text: 'Harika görünüyor! Renk paleti çok uyumlu olmuş.', timestamp: '09:22', isMe: true },
+      { id: 'm6', sender: 'ahmet', senderName: 'Ahmet Yılmaz', text: 'Evet, tasarım ekibimiz gerçekten iyi iş çıkarmış. Devam edelim mi?', timestamp: '09:25', isMe: false },
+      { id: 'm7', sender: 'zeynep', senderName: 'Zeynep Su', text: 'Kesinlikle! Hemen implementasyona başlayabiliriz.', timestamp: '09:26', isMe: false },
+      { id: 'm8', sender: 'me', senderName: 'Sen', text: 'Mükemmel! Toplantıda detayları konuşuruz.', timestamp: '09:27', isMe: true },
+      { id: 'm9', sender: 'canberk', senderName: 'Canberk Öz', text: 'Toplantı notlarını paylaştım, kontrol edebilir misiniz?', timestamp: '14:32', isMe: false },
+    ],
+    '2': [
+      { id: 'm1', sender: 'me', senderName: 'Sen', text: 'Arkadaşlar, v3.0 için branch oluşturdum. Pull request gönderebilirsiniz.', timestamp: '11:00', isMe: true },
+      { id: 'm2', sender: 'mehmet', senderName: 'Mehmet Şahin', text: 'Tamamdır görkem, frontend kısımlarını birazdan pushluyorum.', timestamp: '11:15', isMe: false },
+      { id: 'm3', sender: 'canberk', senderName: 'Canberk Öz', text: 'Ben de backend repolarını güncelledim. Testleri bir kontrol etsek iyi olur.', timestamp: '12:00', isMe: false },
+      { id: 'm4', sender: 'me', senderName: 'Sen', text: 'Harika, testleri öğleden sonra yürütelim.', timestamp: '12:05', isMe: true },
+      { id: 'm5', sender: 'mehmet', senderName: 'Mehmet Şahin', text: 'Yeni özellik için PR hazırladım', timestamp: '13:15', isMe: false },
+    ],
+    '3': [
+      { id: 'm1', sender: 'zeynep', senderName: 'Zeynep Su', text: 'Bence yeni logo için biraz daha yuvarlak hatlar tercih edebiliriz.', timestamp: '10:00', isMe: false },
+      { id: 'm2', sender: 'ayse', senderName: 'Ayşe Kaya', text: 'Ben köşeli hatların daha profesyonel durduğunu düşünüyorum.', timestamp: '10:10', isMe: false },
+      { id: 'm3', sender: 'me', senderName: 'Sen', text: 'İkisinin ortası bir versiyon denesek? Yazı tipini biraz daha yumuşatarak.', timestamp: '10:15', isMe: true },
+      { id: 'm4', sender: 'zeynep', senderName: 'Zeynep Su', text: 'Mantıklı, 3. bir opsiyon hazırlayayım.', timestamp: '10:20', isMe: false },
+      { id: 'm5', sender: 'zeynep', senderName: 'Zeynep Su', text: 'Mockup\'lar hazır, feedback bekliyorum', timestamp: '12:45', isMe: false },
+    ],
+    '4': [
+      { id: 'dm1', sender: 'ahmet', senderName: 'Ahmet Yılmaz', text: 'Merhaba! Yarınki toplantıya katılabilecek misin?', timestamp: '10:30', isMe: false },
+      { id: 'dm2', sender: 'me', senderName: 'Sen', text: 'Evet, katılacağım. Saat kaçta başlıyor?', timestamp: '10:32', isMe: true },
+      { id: 'dm3', sender: 'ahmet', senderName: 'Ahmet Yılmaz', text: 'Saat 14:00\'da başlayacak. Konferans salonunda olacağız.', timestamp: '10:33', isMe: false },
+      { id: 'dm4', sender: 'me', senderName: 'Sen', text: 'Tamam, not aldım. Görüşürüz!', timestamp: '10:35', isMe: true },
+      { id: 'dm5', sender: 'ahmet', senderName: 'Ahmet Yılmaz', text: 'Yarınki toplantıya katılabilecek misin?', timestamp: '11:20', isMe: false },
+    ],
+    '5': [
+      { id: 'dm1', sender: 'me', senderName: 'Sen', text: 'UI tarafındaki son düzenlemeler için gönderdiğin figma linkini bulamıyorum.', timestamp: 'Dün', isMe: true },
+      { id: 'dm2', sender: 'zeynep', senderName: 'Zeynep Su', text: 'Hemen gönderiyorum: figma.com/file/xyz123', timestamp: 'Dün', isMe: false },
+      { id: 'dm3', sender: 'me', senderName: 'Sen', text: 'Süper, hemen el atıyorum.', timestamp: 'Dün', isMe: true },
+      { id: 'dm4', sender: 'zeynep', senderName: 'Zeynep Su', text: 'Teşekkürler! Çok yardımcı oldun', timestamp: 'Dün', isMe: false },
+    ],
+    '6': [
+      { id: 'dm1', sender: 'canberk', senderName: 'Canberk Öz', text: 'Veritabanı migration scriptleri hazır.', timestamp: 'Dün', isMe: false },
+      { id: 'dm2', sender: 'me', senderName: 'Sen', text: 'Eline sağlık testte sorun çıktı mı?', timestamp: 'Dün', isMe: true },
+      { id: 'dm3', sender: 'canberk', senderName: 'Canberk Öz', text: 'Yok temiz geçti.', timestamp: 'Dün', isMe: false },
+      { id: 'dm4', sender: 'canberk', senderName: 'Canberk Öz', text: 'Kod review yapabilir misin?', timestamp: 'Dün', isMe: false },
+    ],
+    '7': [
+      { id: 'dm1', sender: 'me', senderName: 'Sen', text: 'Animasyonları Framer Motion ile baştan yazdım, performans süper oldu.', timestamp: '2 gün önce', isMe: true },
+      { id: 'dm2', sender: 'merve', senderName: 'Merve Aydın', text: 'Bakalım, merak ettim bayağı', timestamp: '2 gün önce', isMe: false },
+      { id: 'dm3', sender: 'merve', senderName: 'Merve Aydın', text: 'Gerçekten çok akıcı olmuş.', timestamp: '2 gün önce', isMe: false },
+      { id: 'dm4', sender: 'merve', senderName: 'Merve Aydın', text: 'Harika bir iş çıkardın!', timestamp: '2 gün önce', isMe: false },
+    ],
+  }
 
 
   const activeRoom = rooms.find(r => r.id === selectedId)
   const activeFriend = friends.find(f => f.id === selectedId)
   const isChattingWithFriend = !!activeFriend
 
-  // Select messages based on active room/friend
+  // Select messages based on active room
   const getMessages = () => {
-    if (isChattingWithFriend) {
-      // Direct message with friend - show direct messages
-      return directMessages
-    } else if (activeRoom) {
-      // Group chat room
-      if (activeRoom.id === '1') {
-        // Proje Ekibi room - show group messages
-        return groupMessages
-      } else {
-        // Other rooms - return sample messages
-        return [
-          { id: 'm1', sender: 'user1', senderName: 'Kullanıcı 1', text: 'Merhaba! Nasılsınız?', timestamp: '10:00', isMe: false },
-          { id: 'm2', sender: 'me', senderName: 'Sen', text: 'İyiyim teşekkürler, sen nasılsın?', timestamp: '10:01', isMe: true },
-          { id: 'm3', sender: 'user2', senderName: 'Kullanıcı 2', text: 'Harika bir gün geçiriyoruz!', timestamp: '10:05', isMe: false },
-        ]
-      }
+    if (activeRoom) {
+      return conversations[activeRoom.id] || []
     }
-    // Default: return group messages
-    return groupMessages
+    return conversations['1']
   }
 
   const messages = getMessages()
@@ -100,7 +117,7 @@ export default function ChatInterfacePreview() {
     } else if (activeRoom) {
       return activeRoom.name
     }
-    return 'Chat App'
+    return 'Blink'
   }
 
   const handleEntityClick = (id: string) => {
@@ -114,7 +131,10 @@ export default function ChatInterfacePreview() {
       {/* Sidebar - Hidden on mobile when chat is active */}
       <div className={`w-full md:w-80 flex flex-col border-r border-slate-100 bg-slate-50/50 ${activeView === 'chat' ? 'hidden md:flex' : 'flex'}`}>
         <div className="p-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-slate-800 tracking-tight">Chat App</h2>
+          <div className="flex items-center gap-2">
+            <img src="/favicon-active.svg" alt="Blink Logo" className="w-6 h-6" />
+            <h2 className="text-xl font-bold text-slate-800 dark:text-white tracking-tight">Blink</h2>
+          </div>
           <div className="flex gap-2">
             <button className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-500 transition-colors relative">
               <div className="w-2 h-2 bg-red-500 rounded-full absolute top-1 right-1 border border-white"></div>

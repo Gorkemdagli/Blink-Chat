@@ -1,15 +1,16 @@
-const { io: Client } = require('socket.io-client');
-
-const { server } = require('../index');
+import { io as Client, Socket as ClientSocket } from 'socket.io-client';
+import { server } from '../index';
+import { Server } from 'http';
 
 describe('Performance Tests', () => {
-    let testServer;
-    let baseUrl;
-    const clients = [];
+    let testServer: Server;
+    let baseUrl: string;
+    const clients: ClientSocket[] = [];
 
     beforeAll((done) => {
         testServer = server.listen(0, () => {
-            const port = testServer.address().port;
+            const address = testServer.address();
+            const port = typeof address === 'string' ? 0 : address?.port;
             baseUrl = `http://localhost:${port}`;
             done();
         });
@@ -36,7 +37,7 @@ describe('Performance Tests', () => {
             const startTime = Date.now();
 
             for (let i = 0; i < connectionCount; i++) {
-                const client = new Client(baseUrl, {
+                const client = Client(baseUrl, {
                     transports: ['websocket'],
                     reconnection: false
                 });
@@ -55,7 +56,7 @@ describe('Performance Tests', () => {
                     }
                 });
 
-                client.on('connect_error', (error) => {
+                client.on('connect_error', (error: Error) => {
                     done(new Error(`Connection failed: ${error.message}`));
                 });
 
@@ -67,17 +68,18 @@ describe('Performance Tests', () => {
             const clientCount = 20;
             const roomId = 'load-test-room';
             let receivedCount = 0;
-            const testClients = [];
+            const testClients: ClientSocket[] = [];
 
             // Create and connect clients
             for (let i = 0; i < clientCount; i++) {
-                const client = new Client(baseUrl);
+                const client = Client(baseUrl);
                 testClients.push(client);
+                clients.push(client);
             }
 
             // Wait for all to connect
             Promise.all(testClients.map(client => {
-                return new Promise((resolve) => {
+                return new Promise<void>((resolve) => {
                     client.on('connect', () => {
                         client.emit('joinRoom', roomId);
                         resolve();
@@ -86,7 +88,7 @@ describe('Performance Tests', () => {
             })).then(() => {
                 // Setup message listeners
                 testClients.forEach(client => {
-                    client.on('newMessage', (msg) => {
+                    client.on('newMessage', (msg: any) => {
                         receivedCount++;
 
                         if (receivedCount === clientCount) {

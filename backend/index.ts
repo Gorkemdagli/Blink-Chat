@@ -1,8 +1,13 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
+// Validate environment variables early
+import './config/env';
+
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
 import basicAuth from 'express-basic-auth';
@@ -13,8 +18,6 @@ import { corsOptions, limiter } from './config/security';
 import { setupSocketHandlers } from './socket/handlers';
 import { scheduleCleanup, runCleanup } from './utils/cronJobs';
 import healthRoutes from './routes/health';
-
-dotenv.config();
 
 const app = express();
 

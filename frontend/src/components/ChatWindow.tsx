@@ -27,10 +27,13 @@ interface ChatWindowProps {
   currentUser?: User | null
   darkMode?: boolean
   onLeaveGroup?: () => void
+  onDeleteRoom?: (roomId: string) => void
+  onRemoveFriend?: (userId: string) => void
   onAddFriend?: (userCode: string) => Promise<{ success: boolean; error?: string }>
   friends?: User[]
   onProfileUpdate?: (user: User) => void
   onRoomUpdate?: () => void
+  showToast?: (message: string, type?: 'success' | 'error' | 'info' | 'warning') => void
 }
 
 export default function ChatWindow({
@@ -49,10 +52,13 @@ export default function ChatWindow({
   lastMessages = {},
   currentUser,
   onLeaveGroup,
+  onDeleteRoom,
+  onRemoveFriend,
   onAddFriend,
   friends = [],
   onProfileUpdate,
-  onRoomUpdate
+  onRoomUpdate,
+  showToast
 }: ChatWindowProps) {
   const [inputValue, setInputValue] = useState('')
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
@@ -184,14 +190,32 @@ export default function ChatWindow({
     }
   }
 
-  // Mobil kontrolü
+  // Mobil kontrolü ve klavye/boyut değişiminde scroll
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768)
     }
+
+    const handleResizeOrImageLoad = () => {
+      checkMobile()
+      // Eğer kullanıcı zaten en alttaysa veya benden bir mesaj geldiyse scroll'u koru
+      if (scrollRef.current) {
+        const container = scrollRef.current
+        const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 200
+        if (isAtBottom) {
+          container.scrollTop = container.scrollHeight
+        }
+      }
+    }
+
     checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
+    window.addEventListener('resize', handleResizeOrImageLoad)
+    window.addEventListener('chat-image-loaded', handleResizeOrImageLoad)
+
+    return () => {
+      window.removeEventListener('resize', handleResizeOrImageLoad)
+      window.removeEventListener('chat-image-loaded', handleResizeOrImageLoad)
+    }
   }, [])
 
   // Long press timer cleanup
@@ -205,16 +229,14 @@ export default function ChatWindow({
 
   // Long press menüsünü dışarı tıklandığında kapat
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: Event) => {
       if (longPressMessageId && !(event.target as HTMLElement).closest('.message-bubble')) {
         setLongPressMessageId(null)
       }
     }
 
     if (longPressMessageId) {
-      // @ts-ignore
       document.addEventListener('click', handleClickOutside)
-      // @ts-ignore
       return () => document.removeEventListener('click', handleClickOutside)
     }
   }, [longPressMessageId])
@@ -258,17 +280,21 @@ export default function ChatWindow({
     if (selectedRoom?.id !== previousRoomIdRef.current) {
       isInitialLoadRef.current = true
       previousRoomIdRef.current = selectedRoom?.id
-      setShowEmojiPicker(false) // Oda değiştiğinde emoji picker'ı kapat
+      setShowEmojiPicker(false)
 
-      // Oda değiştiğinde scroll'u en alta al
-      setTimeout(() => {
+      // Oda değiştiğinde scroll'u anında en alta al (birden fazla deneme ile)
+      const instantScroll = () => {
         if (scrollRef.current) {
           scrollRef.current.scrollTop = scrollRef.current.scrollHeight
         }
         if (messagesEndRef.current) {
-          messagesEndRef.current.scrollIntoView({ behavior: 'auto' })
+          messagesEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' })
         }
-      }, 100)
+      }
+
+      instantScroll()
+      setTimeout(instantScroll, 50)
+      setTimeout(instantScroll, 150)
     }
   }, [selectedRoom?.id])
 
@@ -286,15 +312,19 @@ export default function ChatWindow({
       if (messages.length > 0) {
         isInitialLoadRef.current = false
         lastMessageIdRef.current = messages[messages.length - 1]?.id
-        // Mesajlar yüklendikten sonra biraz bekle (DOM güncellensin)
-        setTimeout(() => {
+
+        const forceScroll = () => {
           if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: 'auto' })
+            messagesEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' })
           }
           if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight
           }
-        }, 150)
+        }
+
+        requestAnimationFrame(forceScroll)
+        setTimeout(forceScroll, 100)
+        setTimeout(forceScroll, 300)
       }
       return
     }
@@ -397,7 +427,7 @@ export default function ChatWindow({
     if (!file) return
 
     if (file.size > 50 * 1024 * 1024) { // 50MB limit
-      alert('Dosya boyutu 50MB\'dan büyük olamaz!')
+      showToast?.('Dosya boyutu 50MB\'dan büyük olamaz!', 'error')
       return
     }
 
@@ -429,7 +459,7 @@ export default function ChatWindow({
       const file = files[0]
 
       if (file.size > 50 * 1024 * 1024) { // 50MB limit
-        alert('Dosya boyutu 50MB\'dan büyük olamaz!')
+        showToast?.('Dosya boyutu 50MB\'dan büyük olamaz!', 'error')
         return
       }
 
@@ -460,7 +490,7 @@ export default function ChatWindow({
       return publicUrl
     } catch (error) {
       console.error('Error uploading file:', error)
-      alert('Dosya yüklenirken hata oluştu!')
+      showToast?.('Dosya yüklenirken hata oluştu!', 'error')
       return null
     }
   }
@@ -598,6 +628,8 @@ export default function ChatWindow({
         setShowMenu={setShowMenu}
         onLeaveGroup={onLeaveGroup}
         onGroupClick={selectedRoom.type === 'private' ? () => setShowGroupInfoModal(true) : undefined}
+        onDeleteChat={onDeleteRoom ? () => onDeleteRoom(selectedRoom.id) : undefined}
+        onRemoveFriend={onRemoveFriend && selectedRoom.otherUser ? () => onRemoveFriend(selectedRoom.otherUser!.id) : undefined}
       />
 
       <MessageList

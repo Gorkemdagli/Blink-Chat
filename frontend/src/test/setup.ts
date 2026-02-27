@@ -42,3 +42,5 @@ vi.mock('../supabaseClient', () => ({
         },
     },
 }));
+// Mock scrollIntoView as JSDOM doesn't implement it
+Element.prototype.scrollIntoView = vi.fn();

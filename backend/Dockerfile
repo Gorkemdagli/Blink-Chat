@@ -1,18 +1,35 @@
-FROM node:22-alpine
+# ══════════════════════════════════════
+# STAGE 1: Builder
+# ══════════════════════════════════════
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
 COPY package*.json ./
+RUN npm ci
 
-# Install dependencies
-RUN npm ci --only=production
-
-# Copy source code
 COPY . .
+RUN npm run build
 
-# Expose port
+# ══════════════════════════════════════
+# STAGE 2: Runner
+# ══════════════════════════════════════
+FROM node:22-alpine AS runner
+
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+
+COPY --chown=appuser:appgroup --from=builder /app/dist ./dist
+
+USER appuser
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget -qO- http://localhost:3000/health || exit 1
+
 EXPOSE 3000
 
-# Start command
-CMD ["npm", "run", "start:prod"]
+CMD ["node", "dist/index.js"]

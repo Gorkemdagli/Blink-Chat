@@ -627,6 +627,24 @@ export function useChatActions(session: Session, state: ChatState, dataFunctions
         }
     }, [session.user.id, fetchFriendRequests, showToast])
 
+    // Arkadaşlıktan çıkar
+    const removeFriend = useCallback(async (friendId: string) => {
+        const { error } = await supabase
+            .from('friends')
+            .delete()
+            .or(`and(user_id.eq.${session.user.id},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${session.user.id})`)
+
+        if (error) {
+            console.error('Error removing friend:', error)
+            showToast('Arkadaş silinirken hata oluştu!', 'error')
+            return false
+        } else {
+            fetchFriends()
+            showToast('Arkadaş silindi.', 'success')
+            return true
+        }
+    }, [session.user.id, fetchFriends, showToast])
+
     // Çıkış yap
     const handleLogout = useCallback(async () => {
         disconnectSocket()
@@ -709,7 +727,8 @@ export function useChatActions(session: Session, state: ChatState, dataFunctions
         openInviteModal,
         leaveGroup,
         handleSendMessage,
-        handleProfileUpdate
+        handleProfileUpdate,
+        removeFriend
     }
 }
 

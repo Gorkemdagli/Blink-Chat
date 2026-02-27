@@ -1,6 +1,49 @@
 import cron from 'node-cron';
 import supabase from '../supabaseClient';
 
+// ─── Path Traversal Guard ────────────────────────────────────────────────────
+/**
+ * Extracts a safe storage path from a Supabase file_url.
+ * Returns null if the path contains traversal sequences or looks malicious.
+ *
+ * Valid:   https://.../storage/v1/object/public/chat-files/abc/file.png
+ * Invalid: https://.../chat-files/../avatars/secret  → null (traversal)
+ * Invalid: https://.../chat-files//etc/passwd         → null (absolute-like)
+ */
+export function extractStoragePath(fileUrl: string): string | null {
+    if (!fileUrl || typeof fileUrl !== 'string') return null;
+
+    const BUCKET_SEGMENT = '/chat-files/';
+    const idx = fileUrl.indexOf(BUCKET_SEGMENT);
+    if (idx === -1) return null;
+
+    const rawPath = fileUrl.slice(idx + BUCKET_SEGMENT.length);
+
+    // Block path traversal sequences
+    if (rawPath.includes('..')) {
+        console.error(`❌ [SECURITY] Path traversal attempt blocked: ${rawPath}`);
+        return null;
+    }
+
+    // Block absolute-like paths
+    if (rawPath.startsWith('/')) {
+        console.error(`❌ [SECURITY] Absolute path attempt blocked: ${rawPath}`);
+        return null;
+    }
+
+    // Block empty or whitespace-only paths
+    const trimmed = rawPath.trim();
+    if (!trimmed) return null;
+
+    // Block null bytes
+    if (trimmed.includes('\x00')) {
+        console.error(`❌ [SECURITY] Null byte in path blocked: ${trimmed}`);
+        return null;
+    }
+
+    return trimmed;
+}
+
 // Core cleanup logic - exported to be run manually or on startup
 export const runCleanup = async () => {
     console.log('🧹 Running automated cleanup job...');
@@ -29,11 +72,10 @@ export const runCleanup = async () => {
 
         console.log(`Found ${expiredMessages.length} messages with expired files.`);
 
-        // 2. Delete files from Storage
-        const filesToDelete = expiredMessages.map((msg: any) => {
-            const urlParts = msg.file_url.split('/chat-files/');
-            return urlParts.length > 1 ? urlParts[1] : null;
-        }).filter((path: string | null) => path !== null) as string[];
+        // 2. Delete files from Storage (with path traversal protection)
+        const filesToDelete = expiredMessages
+            .map((msg: any) => extractStoragePath(msg.file_url))
+            .filter((path): path is string => path !== null);
 
         if (filesToDelete.length > 0) {
             const { error: storageError } = await supabase
@@ -93,7 +135,17 @@ export const runCleanup = async () => {
             });
 
             if (olderThan15Days.length > 0) {
-                const pathsToDelete = olderThan15Days.map(f => folderPath ? `${folderPath}/${f.name}` : f.name);
+                const pathsToDelete = olderThan15Days
+                    .map(f => {
+                        const name = f.name ?? '';
+                        // Guard: skip suspicious file names in storage listing
+                        if (name.includes('..') || name.startsWith('/') || name.includes('\x00')) {
+                            console.error(`❌ [SECURITY] Suspicious filename skipped: ${name}`);
+                            return null;
+                        }
+                        return folderPath ? `${folderPath}/${name}` : name;
+                    })
+                    .filter((p): p is string => p !== null);
                 const { error: deleteError } = await supabase
                     .storage
                     .from('chat-files')

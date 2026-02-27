@@ -47,7 +47,7 @@ export default function Chat({ session, darkMode, onToggleDarkMode }: ChatProps)
         pendingInvitations,
         toast, view, setView,
         currentUser, userPresence,
-        hideToast
+        hideToast, showToast
     } = state
 
     // Destructure data functions
@@ -64,7 +64,7 @@ export default function Chat({ session, darkMode, onToggleDarkMode }: ChatProps)
         acceptInvitation, rejectInvitation,
         acceptFriendRequest, rejectFriendRequest,
         handleLogout, getRoomDisplayName, leaveGroup, handleSendMessage,
-        handleProfileUpdate
+        handleProfileUpdate, removeFriend
     } = actions
 
     // İlk yükleme - TEK RPC çağrısı ile tüm verileri getir (Maksimum Performans)
@@ -143,6 +143,14 @@ export default function Chat({ session, darkMode, onToggleDarkMode }: ChatProps)
                         darkMode={darkMode}
                         onToggleDarkMode={onToggleDarkMode}
                         onProfileUpdate={handleProfileUpdate}
+                        onRemoveFriend={async (userId) => {
+                            const success = await actions.removeFriend(userId)
+                            if (success) {
+                                // if removing successful, we can navigate away from chat optionally
+                                setView('sidebar')
+                                debouncedFetchRooms()
+                            }
+                        }}
                     />
                 </div>
 
@@ -183,10 +191,20 @@ export default function Chat({ session, darkMode, onToggleDarkMode }: ChatProps)
                             currentUser={currentUser}
                             darkMode={darkMode}
                             onLeaveGroup={() => leaveGroup(currentRoom.id)}
+                            onDeleteRoom={deleteRoom}
+                            onRemoveFriend={async (userId) => {
+                                const success = await removeFriend(userId)
+                                if (success) {
+                                    // if removing successful, we can navigate away from chat optionally
+                                    setView('sidebar')
+                                    debouncedFetchRooms()
+                                }
+                            }}
                             onAddFriend={handleAddFriend}
                             friends={friends}
                             onProfileUpdate={handleProfileUpdate}
                             onRoomUpdate={debouncedFetchRooms}
+                            showToast={showToast}
                         />
                     ) : (
                         <EmptyState />

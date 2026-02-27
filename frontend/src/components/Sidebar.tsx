@@ -4,7 +4,8 @@ import {
   LogOut,
   Plus,
   Moon,
-  Sun
+  Sun,
+  UserMinus
 } from 'lucide-react'
 import { Room, User, UnreadCounts, Message } from '../types'
 import { Session } from '@supabase/supabase-js'
@@ -30,6 +31,7 @@ interface SidebarProps {
   darkMode: boolean
   onToggleDarkMode: () => void
   onProfileUpdate?: (user: User) => void
+  onRemoveFriend?: (userId: string) => void
 }
 
 export default function Sidebar({
@@ -51,7 +53,8 @@ export default function Sidebar({
   userPresence = new Map(),
   darkMode,
   onToggleDarkMode,
-  onProfileUpdate
+  onProfileUpdate,
+  onRemoveFriend
 }: SidebarProps) {
   const [activeTab, setActiveTab] = useState('Odalar')
   const [showProfileModal, setShowProfileModal] = useState(false)
@@ -80,15 +83,19 @@ export default function Sidebar({
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-white dark:bg-slate-900 border-r border-gray-100 dark:border-slate-800">
+    <aside aria-label="Ana Kenar Çubuğu" className="w-full h-full flex flex-col bg-white dark:bg-slate-900 border-r border-gray-100 dark:border-slate-800">
       {/* Header */}
       <div className="h-[64px] md:h-[72px] px-4 md:px-6 flex items-center justify-between shrink-0 border-b border-gray-100 dark:border-slate-800">
-        <h1 className="text-xl font-bold tracking-tight dark:text-white">Chat App</h1>
+        <div className="flex items-center gap-2">
+          <img src="/favicon-active.svg" alt="Blink Logo" className="w-6 h-6 md:w-8 md:h-8" />
+          <h1 className="text-xl font-bold tracking-tight dark:text-white">Blink</h1>
+        </div>
         <div className="flex items-center gap-3">
           <button
             onClick={onToggleDarkMode}
             className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition-all"
             title={darkMode ? "Açık Mod" : "Koyu Mod"}
+            aria-label={darkMode ? "Açık Moda Geç" : "Koyu Moda Geç"}
           >
             {darkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
@@ -96,6 +103,7 @@ export default function Sidebar({
             onClick={onNotificationsClick || onAddFriendClick}
             className="relative p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition-all"
             title="Bildirimler"
+            aria-label={`Bildirimler, ${totalNotifications} okunmamış bildirim`}
           >
             <Bell size={20} />
             {totalNotifications > 0 && (
@@ -106,11 +114,15 @@ export default function Sidebar({
       </div>
 
       {/* Tabs */}
-      <div className="px-4 md:px-5 mb-4 shrink-0 pt-4">
-        <div className="flex p-1 bg-gray-100 dark:bg-slate-800 rounded-lg">
+      <nav className="px-4 md:px-5 mb-4 shrink-0 pt-4" aria-label="Kenar Çubuğu Sekmeleri">
+        <div className="flex p-1 bg-gray-100 dark:bg-slate-800 rounded-lg" role="tablist">
           {['Odalar', 'Arkadaşlar'].map((tab) => (
             <button
               key={tab}
+              role="tab"
+              aria-selected={activeTab === tab}
+              aria-controls={`${tab.toLowerCase()}-panel`}
+              id={`${tab.toLowerCase()}-tab`}
               onClick={() => setActiveTab(tab)}
               className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === tab
                 ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
@@ -121,20 +133,21 @@ export default function Sidebar({
             </button>
           ))}
         </div>
-      </div>
+      </nav>
 
       {/* Content Scroll Area */}
       <div className="flex-1 overflow-y-auto px-2 space-y-6">
         {activeTab === 'Odalar' && (
-          <section className="animate-in fade-in slide-in-from-left-2 duration-200">
+          <section id="odalar-panel" role="tabpanel" aria-labelledby="odalar-tab" className="animate-in fade-in slide-in-from-left-2 duration-200">
             <div className="flex items-center justify-between px-3 mb-2">
               <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Odalarınız</span>
               <button
                 onClick={onCreateGroupClick}
                 className="text-sky-500 hover:bg-sky-50 p-1 rounded transition-colors"
                 title="Yeni Grup Oluştur"
+                aria-label="Yeni Grup Oluştur"
               >
-                <Plus size={18} />
+                <Plus size={18} aria-hidden="true" />
               </button>
             </div>
             <div className="space-y-0.5">
@@ -147,7 +160,9 @@ export default function Sidebar({
                   <button
                     key={room.id}
                     onClick={() => onSelectRoom(room)}
-                    className={`w-full text-left px-3 py-3 rounded-lg flex flex-col gap-0.5 transition-all relative ${selectedRoomId === room.id
+                    aria-label={`${getRoomDisplayName(room)} odasını aç. ${unreadCounts[room.id] > 0 ? `${unreadCounts[room.id]} okunmamış mesaj var` : 'Okunmamış mesaj yok'}`}
+                    aria-current={selectedRoomId === room.id ? "page" : undefined}
+                    className={`w-full text-left px-3 py-3 rounded-lg flex flex-col gap-0.5 transition-all relative focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${selectedRoomId === room.id
                       ? 'bg-sky-50 dark:bg-sky-900/20 border-l-4 border-sky-500'
                       : 'hover:bg-gray-50 dark:hover:bg-slate-800/50 border-l-4 border-transparent'
                       }`}
@@ -178,8 +193,9 @@ export default function Sidebar({
                               e.stopPropagation()
                               onDeleteRoom(room.id)
                             }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 p-1 cursor-pointer"
+                            className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity text-red-500 hover:text-red-700 p-1 cursor-pointer rounded"
                             title="Odayı sil"
+                            aria-label={`${getRoomDisplayName(room)} odasını sil`}
                             role="button"
                             tabIndex={0}
                             onKeyDown={(e) => {
@@ -221,15 +237,16 @@ export default function Sidebar({
         )}
 
         {activeTab === 'Arkadaşlar' && (
-          <section className="animate-in fade-in slide-in-from-right-2 duration-200">
+          <section id="arkadaşlar-panel" role="tabpanel" aria-labelledby="arkadaşlar-tab" className="animate-in fade-in slide-in-from-right-2 duration-200">
             <div className="flex items-center justify-between px-3 mb-2">
               <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Arkadaşlar</span>
               <button
                 onClick={onAddFriendClick}
-                className="text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-900/20 p-1 rounded transition-colors"
+                className="text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-900/20 p-1 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
                 title="Arkadaş Ekle"
+                aria-label="Arkadaş Ekle"
               >
-                <Plus size={18} />
+                <Plus size={18} aria-hidden="true" />
               </button>
             </div>
             <div className="space-y-1">
@@ -247,9 +264,10 @@ export default function Sidebar({
                     avatar_url: friend.friend_avatar || friend.avatar
                   } as User
                   return (
-                    <div
+                    <button
                       key={user.id}
-                      className="group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
+                      className="w-full text-left group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                      aria-label={`${user.username || user.email || 'Bilinmeyen Kullanıcı'} ile direkt mesaj başlat`}
                       onClick={() => onSelectRoom({
                         id: user.id,
                         name: user.username || user.email || 'Kullanıcı',
@@ -261,13 +279,18 @@ export default function Sidebar({
                     >
                       <div className="relative">
                         <img
-                          src={user.avatar_url || `https://ui-avatars.com/api/?name=${user.username || user.email}`}
+                          src={user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username || user.email || 'U')}`}
                           className="w-9 h-9 rounded-full bg-gray-200 dark:bg-slate-700 object-cover"
                           alt={user.username || user.email || ''}
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.onerror = null;
+                            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username || user.email || 'U')}`;
+                          }}
                         />
                         <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${userPresence.get(user.id)?.online ? 'bg-green-500' : 'bg-gray-400 dark:bg-gray-600'}`}></span>
                       </div>
-                      <div className="flex-1 overflow-hidden">
+                      <div className="flex-1 overflow-hidden pointer-events-none">
                         <p className="text-sm font-semibold truncate text-slate-900 dark:text-gray-200">
                           {user.username || user.email || 'Bilinmeyen Kullanıcı'}
                         </p>
@@ -275,7 +298,34 @@ export default function Sidebar({
                           <p className="text-xs text-gray-400 dark:text-gray-500 font-mono">#{user.user_code}</p>
                         )}
                       </div>
-                    </div>
+
+                      {onRemoveFriend && (
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (confirm('Arkadaşlıktan çıkarmak istediğinize emin misiniz?')) {
+                              onRemoveFriend(user.id)
+                            }
+                          }}
+                          className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity text-red-500 hover:text-red-700 p-1.5 cursor-pointer rounded z-10"
+                          title="Arkadaşlıktan çıkar"
+                          aria-label={`${user.username || user.email || 'Kullanıcı'} arkadaşını çıkar`}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              if (confirm('Arkadaşlıktan çıkarmak istediğinize emin misiniz?')) {
+                                onRemoveFriend(user.id)
+                              }
+                            }
+                          }}
+                        >
+                          <UserMinus size={18} />
+                        </div>
+                      )}
+                    </button>
                   )
                 })
               )}
@@ -287,8 +337,9 @@ export default function Sidebar({
       {/* Footer */}
       <div className="h-[72px] md:h-[80px] px-4 md:px-6 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white dark:bg-slate-900/50">
         <button
-          className="flex items-center gap-3 w-full text-left -ml-2 p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors group"
+          className="flex items-center gap-3 w-full text-left -ml-2 p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors group focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
           onClick={() => setShowProfileModal(true)}
+          aria-label="Profil görünümünü aç"
         >
           <div className="relative">
             <img
@@ -311,10 +362,11 @@ export default function Sidebar({
         </button>
         <button
           onClick={onLogout}
-          className="text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded-lg transition-colors ml-2"
+          className="text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded-lg transition-colors ml-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
           title="Çıkış Yap"
+          aria-label="Hesaptan çıkış yap"
         >
-          <LogOut size={20} />
+          <LogOut size={20} aria-hidden="true" />
         </button>
       </div>
 
@@ -328,6 +380,6 @@ export default function Sidebar({
           isOwnProfile={true}
         />
       )}
-    </div>
+    </aside>
   )
 }

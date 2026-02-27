@@ -3,10 +3,12 @@ import Redis from 'ioredis';
 // Default to localhost for local dev without docker or if env vars missing
 const redisHost = process.env.REDIS_HOST || 'localhost';
 const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
+const redisPassword = process.env.REDIS_PASSWORD?.trim() || undefined;
 
 const redis = new Redis({
     host: redisHost,
     port: redisPort,
+    password: redisPassword,
     // Retry strategy
     retryStrategy: (times) => {
         // Stop retrying after 20 times

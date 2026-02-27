@@ -2,57 +2,58 @@ import { Users, FileText, Zap, Lock, MessageSquare, Bell, Search, Globe, Clock, 
 
 interface FeaturesPageProps {
   onBack: () => void
+  onStart: () => void
 }
 
-export default function FeaturesPage({ onBack }: FeaturesPageProps) {
+export default function FeaturesPage({ onBack, onStart }: FeaturesPageProps) {
   const mainFeatures = [
     {
       icon: <MessageSquare className="w-8 h-8 text-blue-600 dark:text-sky-400" />,
       title: 'Gerçek Zamanlı Mesajlaşma',
-      description: 'Mesajlarınız anında iletiliyor. <50ms gecikme süresi ile kesintisiz sohbet deneyimi.',
-      highlight: '50ms'
+      description: 'Mesaj gönderdiğiniz anda karşı tarafa ulaşır. Bekleme yok.',
+      highlight: 'Anlık'
     },
     {
       icon: <Users className="w-8 h-8 text-blue-600 dark:text-sky-400" />,
       title: 'Sınırsız Grup Sohbetleri',
-      description: 'İstediğiniz kadar üye ile grup oluşturun. Projelerinizi kolayca yönetin ve ekip iletişimini güçlendirin.',
+      description: 'İstediğiniz kadar üye ile organize olun. Sınır yok.',
       highlight: 'Sınırsız'
     },
     {
       icon: <Lock className="w-8 h-8 text-blue-600 dark:text-sky-400" />,
-      title: 'Uçtan Uca Şifreleme',
-      description: 'Mesajlarınız özel anahtarlarla şifrelenir. Sadece alıcı tarafından okunabilir, maksimum güvenlik.',
-      highlight: 'E2E'
+      title: 'Veri Güvenliği',
+      description: 'RLS politikaları ile her kullanıcı yalnızca kendi verisine erişir.',
+      highlight: 'RLS'
     },
     {
       icon: <FileText className="w-8 h-8 text-blue-600 dark:text-sky-400" />,
       title: 'Dosya Paylaşımı',
-      description: 'Her türlü dosyayı sürükle-bırak ile paylaşın. Yüksek boyutlu dosyalar için optimize edilmiş hız.',
+      description: 'Sürükle, bırak, gönder. Bu kadar basit.',
       highlight: 'Hızlı'
     },
     {
       icon: <Bell className="w-8 h-8 text-blue-600 dark:text-sky-400" />,
       title: 'Akıllı Bildirimler',
-      description: 'Önemli mesajları kaçırmayın. Özelleştirilebilir bildirim ayarları ile kontrol sizde.',
+      description: 'Sadece önemli olanı görün. Kontrol sizde.',
       highlight: 'Akıllı'
     },
     {
       icon: <Search className="w-8 h-8 text-blue-600 dark:text-sky-400" />,
       title: 'Gelişmiş Arama',
-      description: 'Mesaj geçmişinizde hızlıca arama yapın. Tarih, gönderen ve içerik filtreleri ile istediğinizi bulun.',
+      description: 'Geçmiş mesajlara saniyeler içinde ulaşın.',
       highlight: 'Hızlı'
     },
     {
       icon: <Globe className="w-8 h-8 text-blue-600 dark:text-sky-400" />,
-      title: 'Çoklu Platform',
-      description: 'Web, mobil ve masaüstü uygulamaları ile her yerden erişin. Senkronizasyon otomatik.',
+      title: 'Her Yerden Erişim',
+      description: 'Web, mobil ve masaüstünde senkronize.',
       highlight: 'Her Yerden'
     },
     {
       icon: <Zap className="w-8 h-8 text-blue-600 dark:text-sky-400" />,
-      title: 'Yıldırım Hızı',
-      description: 'Optimize edilmiş performans ile yıldırım hızlı deneyim. 93% daha az istek ile maksimum hız.',
-      highlight: '93%'
+      title: 'WebSocket Tabanlı',
+      description: 'Kalıcı bağlantı sayesinde gereksiz istek yok, anlık iletim var.',
+      highlight: 'WebSocket'
     },
   ]
 
@@ -60,8 +61,8 @@ export default function FeaturesPage({ onBack }: FeaturesPageProps) {
     {
       category: 'Güvenlik',
       items: [
-        'Uçtan uca şifreleme',
-        'İki faktörlü kimlik doğrulama',
+        'RLS tabanlı veri izolasyonu',
+        'OAuth entegrasyonu (Google, GitHub)',
         'Otomatik oturum yönetimi',
         'Gizlilik odaklı tasarım'
       ]
@@ -70,7 +71,7 @@ export default function FeaturesPage({ onBack }: FeaturesPageProps) {
       category: 'İletişim',
       items: [
         'Gerçek zamanlı mesajlaşma',
-        'Sesli mesaj desteği',
+        'Yazıyor ve okundu bildirimleri',
         'Grup sohbetleri',
         'Özel mesajlaşma'
       ]
@@ -87,19 +88,19 @@ export default function FeaturesPage({ onBack }: FeaturesPageProps) {
     {
       category: 'Performans',
       items: [
-        '<50ms mesaj gecikmesi',
-        '93% daha az API isteği',
-        'Akıllı önbellekleme',
-        'Optimize edilmiş yükleme'
+        'WebSocket ile anlık iletim',
+        'Akıllı önbellekleme ve batch güncelleme',
+        'Optimize edilmiş yükleme',
+        'Kalıcı bağlantı mimarisi'
       ]
     }
   ]
 
   const stats = [
-    { number: '<50ms', label: 'Mesaj Gecikmesi', icon: <Zap className="w-6 h-6" /> },
-    { number: '93%', label: 'Daha Az İstek', icon: <Zap className="w-6 h-6" /> },
+    { number: 'Anlık', label: 'Gerçek Zamanlı İletim', icon: <Zap className="w-6 h-6" /> },
+    { number: 'WebSocket', label: 'Kalıcı Bağlantı', icon: <Zap className="w-6 h-6" /> },
     { number: '∞', label: 'Sınırsız Grup', icon: <Users className="w-6 h-6" /> },
-    { number: '24/7', label: 'Kesintisiz Hizmet', icon: <Clock className="w-6 h-6" /> },
+    { number: '24/7', label: 'Sürekli Erişim', icon: <Clock className="w-6 h-6" /> },
   ]
 
   return (
@@ -108,10 +109,8 @@ export default function FeaturesPage({ onBack }: FeaturesPageProps) {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 transition-colors">
         <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer" onClick={onBack}>
-            <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg shadow-blue-200 dark:shadow-none">
-              <span className="text-white font-black text-lg md:text-xl">C</span>
-            </div>
-            <span className="text-xl md:text-2xl font-black tracking-tight text-slate-900 dark:text-white">ChatApp</span>
+            <img src="/favicon-active.svg" alt="Blink Logo" className="w-8 h-8 md:w-10 md:h-10" />
+            <span className="text-xl md:text-2xl font-black tracking-tight text-slate-900 dark:text-white">Blink</span>
           </div>
           <button
             onClick={onBack}
@@ -173,7 +172,7 @@ export default function FeaturesPage({ onBack }: FeaturesPageProps) {
               Güçlü Özellikler
             </h2>
             <p className="max-w-2xl mx-auto text-base md:text-lg text-slate-500 dark:text-gray-400 font-medium leading-relaxed">
-              Her detay düşünülmüş, her özellik optimize edilmiş. İşte ChatApp'i benzersiz kılan özellikler.
+              Her detay düşünülmüş, her özellik optimize edilmiş. İşte Blink'i özel kılan özellikler.
             </p>
           </div>
 
@@ -230,14 +229,11 @@ export default function FeaturesPage({ onBack }: FeaturesPageProps) {
       <section className="py-16 md:py-32 px-4 md:px-6">
         <div className="max-w-4xl mx-auto text-center">
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 border border-blue-100 dark:border-blue-900/20 rounded-[40px] md:rounded-[60px] p-8 md:p-16">
-            <h2 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white mb-4 md:mb-6 tracking-tight">
-              Hemen Başlayın
-            </h2>
             <p className="text-base md:text-lg text-slate-600 dark:text-gray-400 mb-8 md:mb-12 font-medium leading-relaxed max-w-2xl mx-auto">
               Tüm bu özellikleri ücretsiz deneyin. Hesap oluşturmanız sadece birkaç saniye sürer.
             </p>
             <button
-              onClick={onBack}
+              onClick={onStart}
               className="group inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 md:px-12 py-4 md:py-5 rounded-2xl font-bold text-base md:text-lg transition-all shadow-xl shadow-blue-100 dark:shadow-none hover:-translate-y-1"
             >
               Ücretsiz Başla
@@ -251,12 +247,10 @@ export default function FeaturesPage({ onBack }: FeaturesPageProps) {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 md:w-8 md:h-8 bg-blue-600 rounded flex items-center justify-center">
-                <span className="text-white font-black text-base md:text-lg">C</span>
-              </div>
-              <span className="text-lg md:text-xl font-black text-white">ChatApp</span>
+              <img src="/favicon-active.svg" alt="Blink Logo" className="w-6 h-6 md:w-8 md:h-8" />
+              <span className="text-lg md:text-xl font-black text-white">Blink</span>
             </div>
-            <p className="text-[10px] md:text-xs font-medium">© 2024 ChatApp. Tüm hakları saklıdır.</p>
+            <p className="text-[10px] md:text-xs font-medium">© 2024 Blink. Tüm hakları saklıdır.</p>
           </div>
         </div>
       </footer>

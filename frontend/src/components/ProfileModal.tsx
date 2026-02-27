@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { X, Camera, Copy, Check, User, Save, Loader2, UserPlus, Clock } from 'lucide-react'
+import { X, Camera, Copy, Check, User, Save, Loader2, UserPlus, Clock, UserMinus } from 'lucide-react'
 import { User as UserType } from '../types'
 import { supabase } from '../supabaseClient'
 
@@ -9,6 +9,7 @@ interface ProfileModalProps {
     onClose: () => void
     onUpdate?: (updatedUser: UserType) => void
     onAddFriend?: (userCode: string) => Promise<{ success: boolean; error?: string }>
+    onRemoveFriend?: (userId: string) => void
     isFriend?: boolean
     isOwnProfile?: boolean
     userPresence?: { online: boolean; lastSeen?: string }
@@ -20,6 +21,7 @@ export default function ProfileModal({
     onClose,
     onUpdate,
     onAddFriend,
+    onRemoveFriend,
     isOwnProfile = false,
     isFriend = false,
     userPresence
@@ -27,6 +29,7 @@ export default function ProfileModal({
     const [name, setName] = useState(user.username || '')
     const [bio, setBio] = useState(user.bio || '')
     const [userCode, setUserCode] = useState(user.user_code || '')
+    const [avatarUrl, setAvatarUrl] = useState(user.avatar_url || '')
     const [isLoading, setIsLoading] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
     const [copiedCode, setCopiedCode] = useState(false)
@@ -47,6 +50,7 @@ export default function ProfileModal({
                     setBio(data.bio || '')
                     setUserCode(data.user_code || '')
                     if (data.username && data.username !== user.username) setName(data.username)
+                    if (data.avatar_url && data.avatar_url !== user.avatar_url) setAvatarUrl(data.avatar_url)
                 }
             }
             fetchUserDetails()
@@ -58,6 +62,7 @@ export default function ProfileModal({
         if (isOpen) {
             setName(user.username || '')
             setUserCode(user.user_code || '')
+            setAvatarUrl(user.avatar_url || '')
             // Don't reset bio here immediately if we are fetching it
             // but we set initial state from props.user.bio
             setError('')
@@ -154,6 +159,7 @@ export default function ProfileModal({
             console.log('✅ Database updated successfully:', updateData)
 
             if (onUpdate) onUpdate({ ...user, avatar_url: publicUrlWithCacheBust })
+            setAvatarUrl(publicUrlWithCacheBust)
 
         } catch (err: any) {
             console.error('Error uploading avatar:', err)
@@ -260,9 +266,14 @@ export default function ProfileModal({
                     <div className="flex flex-col items-center gap-4">
                         <div className={`relative group ${isOwnProfile ? 'cursor-pointer' : ''}`} onClick={() => isOwnProfile && fileInputRef.current?.click()}>
                             <img
-                                src={user.avatar_url || `https://ui-avatars.com/api/?name=${user.username}`}
+                                src={avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username || 'User')}`}
                                 alt={user.username}
-                                className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-slate-700 shadow-lg group-hover:opacity-90 transition-opacity"
+                                onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.onerror = null;
+                                    target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username || 'User')}`;
+                                }}
+                                className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-slate-700 shadow-lg group-hover:opacity-90 transition-opacity bg-white"
                             />
                             {isOwnProfile && (
                                 <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
@@ -311,16 +322,32 @@ export default function ProfileModal({
                             <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide ml-1">
                                 Görünen İsim
                             </label>
-                            <div className="relative">
-                                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                                <input
-                                    type="text"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    readOnly={!isOwnProfile}
-                                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700  text-slate-900 dark:text-white placeholder:text-gray-400 focus:outline-none transition-all font-medium ${isOwnProfile ? 'bg-gray-50 dark:bg-slate-900/50 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20' : 'bg-transparent border-transparent pl-10'}`}
-                                    placeholder="İsim yok"
-                                />
+                            <div className="flex items-center gap-2">
+                                <div className="relative flex-1">
+                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                    <input
+                                        type="text"
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                        readOnly={!isOwnProfile}
+                                        className={`w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-gray-400 focus:outline-none transition-all font-medium ${isOwnProfile ? 'bg-gray-50 dark:bg-slate-900/50 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20' : 'bg-transparent border-transparent pl-10'}`}
+                                        placeholder="İsim yok"
+                                    />
+                                </div>
+                                {!isOwnProfile && isFriend && onRemoveFriend && (
+                                    <button
+                                        onClick={() => {
+                                            if (confirm('Arkadaşlıktan çıkarmak istediğinize emin misiniz?')) {
+                                                onRemoveFriend(user.id);
+                                                onClose();
+                                            }
+                                        }}
+                                        className="p-2.5 text-red-500 hover:text-white hover:bg-red-500 bg-red-50 dark:bg-red-900/20 dark:hover:bg-red-500 rounded-xl transition-all"
+                                        title="Arkadaşlıktan Çıkar"
+                                    >
+                                        <UserMinus size={20} />
+                                    </button>
+                                )}
                             </div>
                         </div>
 

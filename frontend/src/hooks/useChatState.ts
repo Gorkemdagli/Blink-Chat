@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
-import { User, Room, Message, FriendRequest, Toast, UnreadCounts } from '../types'
+import { User, Room, Message, FriendRequest, Toast, UnreadCounts, Friend, RoomInvite } from '../types'
 
 /**
  * Chat state yönetimi için custom hook
@@ -31,7 +31,7 @@ export function useChatState() {
 
     // User Data
     const [currentUser, setCurrentUser] = useState<User | null>(null)
-    const [friends, setFriends] = useState<any[]>([]) // Use any needed for mismatch between User/Friend types initially, or Friend[]
+    const [friends, setFriends] = useState<Friend[]>([])
     const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([])
 
     // Presence
@@ -43,7 +43,7 @@ export function useChatState() {
     const [showInvitationsPanel, setShowInvitationsPanel] = useState(false)
     const [showAddFriendModal, setShowAddFriendModal] = useState(false)
     const [showCreateRoomModal, setShowCreateRoomModal] = useState(false)
-    const [pendingInvitations, setPendingInvitations] = useState<any[]>([])
+    const [pendingInvitations, setPendingInvitations] = useState<RoomInvite[]>([])
     const [friendCode, setFriendCode] = useState('')
     const [newRoomName, setNewRoomName] = useState('')
     const [selectedFriendsForRoom, setSelectedFriendsForRoom] = useState<string[]>([])

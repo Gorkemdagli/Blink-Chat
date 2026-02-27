@@ -431,14 +431,30 @@ CREATE POLICY "Owners or self can remove members" ON public.room_members FOR DEL
 -- 6.5 STORAGE SETUP (chat-files & avatars)
 -- ============================================
 
--- Create buckets if not exist
-INSERT INTO storage.buckets (id, name, public) 
-VALUES ('chat-files', 'chat-files', false)
-ON CONFLICT (id) DO NOTHING;
+-- Create buckets with size and MIME-type limits
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) 
+VALUES (
+  'chat-files', 
+  'chat-files', 
+  false,
+  26214400, -- 25MB
+  ARRAY['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain', 'video/mp4', 'audio/mpeg', 'application/zip', 'application/x-zip-compressed']::text[]
+)
+ON CONFLICT (id) DO UPDATE SET 
+  file_size_limit = EXCLUDED.file_size_limit,
+  allowed_mime_types = EXCLUDED.allowed_mime_types;
 
-INSERT INTO storage.buckets (id, name, public) 
-VALUES ('avatars', 'avatars', true)
-ON CONFLICT (id) DO NOTHING;
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) 
+VALUES (
+  'avatars', 
+  'avatars', 
+  true,
+  5242880, -- 5MB
+  ARRAY['image/jpeg', 'image/png', 'image/gif', 'image/webp']::text[]
+)
+ON CONFLICT (id) DO UPDATE SET 
+  file_size_limit = EXCLUDED.file_size_limit,
+  allowed_mime_types = EXCLUDED.allowed_mime_types;
 
 -- RLS for chat-files (Private/Room based)
 CREATE POLICY "Users can upload chat files" ON storage.objects

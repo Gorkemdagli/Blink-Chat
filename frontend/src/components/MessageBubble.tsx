@@ -141,6 +141,12 @@ export default function MessageBubble({
                                     alt="Shared image"
                                     className="max-w-full md:max-w-[300px] max-h-[200px] md:max-h-[300px] rounded-lg object-cover cursor-pointer hover:opacity-95 transition-all"
                                     onClick={() => setPreviewImage(msg.file_url || null)}
+                                    onLoad={() => {
+                                        // Trigger a scroll update if this component is at the bottom
+                                        if (typeof window !== 'undefined') {
+                                            window.dispatchEvent(new Event('chat-image-loaded'));
+                                        }
+                                    }}
                                 />
                                 <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/50 text-[9px] text-white rounded backdrop-blur-sm sm:hidden pointer-events-none">
                                     {formatBytes(msg.file_size)}

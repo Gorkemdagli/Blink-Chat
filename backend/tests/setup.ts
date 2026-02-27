@@ -3,13 +3,13 @@ process.env.NODE_ENV = 'test';
 
 // Comprehensive Supabase Mock for all tests
 const mockSupabaseBuilder = {
-    _table: null,
-    _insertData: null,
+    _table: null as string | null,
+    _insertData: null as any,
     _selectCalled: false,
-    _filterField: null,
-    _filterValue: null,
+    _filterField: null as string | null,
+    _filterValue: null as any,
 
-    from: jest.fn(function (table) {
+    from: jest.fn(function (this: any, table: string) {
         this._table = table;
         this._insertData = null;
         this._selectCalled = false;
@@ -18,17 +18,17 @@ const mockSupabaseBuilder = {
         return this;
     }),
 
-    insert: jest.fn(function (data) {
+    insert: jest.fn(function (this: any, data: any) {
         this._insertData = data;
         return this;
     }),
 
-    select: jest.fn(function (fields) {
+    select: jest.fn(function (this: any, fields?: string) {
         this._selectCalled = true;
         return this;
     }),
 
-    eq: jest.fn(function (field, value) {
+    eq: jest.fn(function (this: any, field: string, value: any) {
         this._filterField = field;
         this._filterValue = value;
         return this;
@@ -38,7 +38,7 @@ const mockSupabaseBuilder = {
     not: jest.fn().mockReturnThis(),
     update: jest.fn().mockReturnThis(),
 
-    single: jest.fn(function () {
+    single: jest.fn(function (this: any) {
         // Return user data for user queries
         return Promise.resolve({
             data: {
@@ -53,7 +53,7 @@ const mockSupabaseBuilder = {
     }),
 
     // Handle await on the builder (for insert().select() chains)
-    then: function (resolve, reject) {
+    then: function (this: any, resolve: any, reject: any) {
         if (this._insertData) {
             // Return inserted message data
             const messageData = Array.isArray(this._insertData) ? this._insertData[0] : this._insertData;
