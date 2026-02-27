@@ -612,7 +612,7 @@ export default function ChatWindow({
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-gray-50 to-white dark:from-slate-950 dark:to-slate-900 relative w-full"
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-gray-50 to-white dark:from-slate-900 dark:to-slate-900 relative w-full"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}

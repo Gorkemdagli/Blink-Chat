@@ -1,48 +1,34 @@
 // Set NODE_ENV to test for all test runs
 process.env.NODE_ENV = 'test';
+process.env.SUPABASE_URL = process.env.SUPABASE_URL || 'https://mock.supabase.co';
 
-// Comprehensive Supabase Mock for all tests
-const mockSupabaseBuilder = {
-    _table: null as string | null,
-    _insertData: null as any,
-    _selectCalled: false,
-    _filterField: null as string | null,
-    _filterValue: null as any,
+// ─── Chainable Query Builder (per-call isolation) ───
+function createChainBuilder() {
+    const chain: any = {
+        _insertData: null,
+        _table: null,
+        _filterField: null,
+        _filterValue: null,
+    };
 
-    from: jest.fn(function (this: any, table: string) {
-        this._table = table;
-        this._insertData = null;
-        this._selectCalled = false;
-        this._filterField = null;
-        this._filterValue = null;
-        return this;
-    }),
-
-    insert: jest.fn(function (this: any, data: any) {
-        this._insertData = data;
-        return this;
-    }),
-
-    select: jest.fn(function (this: any, fields?: string) {
-        this._selectCalled = true;
-        return this;
-    }),
-
-    eq: jest.fn(function (this: any, field: string, value: any) {
-        this._filterField = field;
-        this._filterValue = value;
-        return this;
-    }),
-
-    neq: jest.fn().mockReturnThis(),
-    not: jest.fn().mockReturnThis(),
-    update: jest.fn().mockReturnThis(),
-
-    single: jest.fn(function (this: any) {
-        // Return user data for user queries
+    chain.select = jest.fn(() => chain);
+    chain.eq = jest.fn((field: string, value: any) => {
+        chain._filterField = field;
+        chain._filterValue = value;
+        return chain;
+    });
+    chain.neq = jest.fn(() => chain);
+    chain.not = jest.fn(() => chain);
+    chain.update = jest.fn(() => chain);
+    chain.insert = jest.fn((data: any) => {
+        chain._insertData = data;
+        return chain;
+    });
+    chain.maybeSingle = jest.fn().mockResolvedValue({ data: { user_id: 'test-user-id' }, error: null });
+    chain.single = jest.fn(() => {
         return Promise.resolve({
             data: {
-                id: this._filterValue || 'test-user-id',
+                id: chain._filterValue || 'test-user-id',
                 username: 'testuser',
                 email: 'test@example.com',
                 user_code: 'TEST123',
@@ -50,13 +36,12 @@ const mockSupabaseBuilder = {
             },
             error: null
         });
-    }),
+    });
 
-    // Handle await on the builder (for insert().select() chains)
-    then: function (this: any, resolve: any, reject: any) {
-        if (this._insertData) {
-            // Return inserted message data
-            const messageData = Array.isArray(this._insertData) ? this._insertData[0] : this._insertData;
+    // Handle await on the chain (for insert().select() pattern)
+    chain.then = function (resolve: any, _reject: any) {
+        if (chain._insertData) {
+            const messageData = Array.isArray(chain._insertData) ? chain._insertData[0] : chain._insertData;
             resolve({
                 data: [{
                     id: Math.floor(Math.random() * 10000),
@@ -66,26 +51,46 @@ const mockSupabaseBuilder = {
                 }],
                 error: null
             });
-        } else if (this._table === 'messages' && this._filterField) {
-            // Return empty array for update queries
-            resolve({
-                data: [],
-                error: null,
-                count: 0
-            });
+        } else if (chain._table === 'messages' && chain._filterField) {
+            resolve({ data: [], error: null, count: 0 });
         } else {
             resolve({ data: [], error: null });
         }
-    }
+    };
+
+    return chain;
+}
+
+// ─── Root mock (NO `then` — prevents thenable resolution) ───
+const mockSupabaseClient = {
+    from: jest.fn((table: string) => {
+        const chain = createChainBuilder();
+        chain._table = table;
+        return chain;
+    }),
+    auth: {
+        getUser: jest.fn().mockResolvedValue({
+            data: { user: { id: 'test-user-id', email: 'test@example.com' } },
+            error: null
+        }),
+        signInWithPassword: jest.fn().mockResolvedValue({ data: { session: { access_token: 'mock-token' } }, error: null }),
+        signOut: jest.fn().mockResolvedValue({ error: null }),
+    },
 };
 
-jest.mock('../supabaseClient', () => mockSupabaseBuilder);
+jest.mock('../supabaseClient', () => ({
+    __esModule: true,
+    default: mockSupabaseClient,
+}));
 
 // Mock Redis to avoid connection errors during tests
 const mockRedis = {
-    get: jest.fn().mockResolvedValue(null), // Always return null (cache miss)
+    get: jest.fn().mockResolvedValue(null),
     set: jest.fn().mockResolvedValue('OK'),
-    on: jest.fn(), // Mock event listeners
+    on: jest.fn(),
 };
 
-jest.mock('../redisClient', () => mockRedis);
+jest.mock('../redisClient', () => ({
+    __esModule: true,
+    default: mockRedis,
+}));

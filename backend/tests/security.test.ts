@@ -65,8 +65,11 @@ describe('Security Headers & Middleware', () => {
 
     describe('XSS Sanitization (Socket.IO)', () => {
         beforeAll((done) => {
-            clientSocket = Client(baseUrl);
+            clientSocket = Client(baseUrl, {
+                auth: { token: 'mock-token' }
+            });
             clientSocket.on('connect', done);
+            clientSocket.on('connect_error', (err) => done(err));
         });
 
         it('should sanitize HTML tags from messages', (done) => {

@@ -39,7 +39,8 @@ describe('Performance Tests', () => {
             for (let i = 0; i < connectionCount; i++) {
                 const client = Client(baseUrl, {
                     transports: ['websocket'],
-                    reconnection: false
+                    reconnection: false,
+                    auth: { token: 'mock-token' }
                 });
 
                 client.on('connect', () => {
@@ -72,7 +73,7 @@ describe('Performance Tests', () => {
 
             // Create and connect clients
             for (let i = 0; i < clientCount; i++) {
-                const client = Client(baseUrl);
+                const client = Client(baseUrl, { auth: { token: 'mock-token' } });
                 testClients.push(client);
                 clients.push(client);
             }

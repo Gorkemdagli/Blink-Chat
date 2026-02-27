@@ -11,9 +11,9 @@ interface LandingPageProps {
 
 export default function LandingPage({ onStart, onShowFeatures, onShowAbout, darkMode, onToggleDarkMode }: LandingPageProps) {
     return (
-        <div className="min-h-screen w-full overflow-x-hidden bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-colors selection:bg-blue-100 selection:text-blue-600">
+        <div className="min-h-screen w-full overflow-x-hidden bg-white dark:bg-slate-900 text-slate-900 dark:text-white transition-colors selection:bg-blue-100 selection:text-blue-600">
             {/* Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 transition-colors">
+            <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 transition-colors">
                 <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
                     <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo(0, 0)}>
                         <img src="/favicon-active.svg" alt="Blink Logo" className="w-8 h-8 md:w-10 md:h-10" />
@@ -89,7 +89,7 @@ export default function LandingPage({ onStart, onShowFeatures, onShowAbout, dark
             </section>
 
             {/* Features Section */}
-            <section id="features" className="py-16 md:py-32 px-4 md:px-6 bg-slate-50/50 dark:bg-slate-900/20 transition-colors">
+            <section className="py-16 md:py-32 px-4 md:px-6 bg-slate-50/50 dark:bg-slate-900/20 transition-colors">
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center mb-12 md:mb-20">
                         <h2 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white mb-4 md:mb-6 tracking-tight">
@@ -153,7 +153,7 @@ export default function LandingPage({ onStart, onShowFeatures, onShowAbout, dark
             </section>
 
             {/* Testimonials */}
-            <section className="py-16 md:py-32 px-4 md:px-6 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white rounded-t-[40px] md:rounded-t-[100px] transition-colors">
+            <section className="py-16 md:py-32 px-4 md:px-6 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white rounded-t-[40px] md:rounded-t-[100px] transition-colors">
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center mb-12 md:mb-20">
                         <h2 className="text-3xl md:text-5xl font-black mb-4 md:mb-6 tracking-tight">Kullanıcılarımız Ne Diyor?</h2>
@@ -196,9 +196,9 @@ export default function LandingPage({ onStart, onShowFeatures, onShowAbout, dark
                         <div>
                             <h4 className="text-white font-bold mb-4 md:mb-6 text-sm md:text-base">Ürün</h4>
                             <ul className="space-y-3 md:space-y-4 text-xs md:text-sm font-medium">
-                                <li><a href="#features" className="hover:text-blue-500 transition-colors">Özellikler</a></li>
+                                <li><button onClick={onShowFeatures} className="hover:text-blue-500 transition-colors">Özellikler</button></li>
                                 <li><button onClick={onStart} className="hover:text-blue-500 transition-colors">Giriş Yap</button></li>
-                                <li><a href="#" className="hover:text-blue-500 transition-colors">İndir</a></li>
+                                <li><span className="hover:text-blue-500 transition-colors cursor-default">İndir</span></li>
                             </ul>
                         </div>
 
@@ -206,16 +206,16 @@ export default function LandingPage({ onStart, onShowFeatures, onShowAbout, dark
                             <h4 className="text-white font-bold mb-4 md:mb-6 text-sm md:text-base">Şirket</h4>
                             <ul className="space-y-3 md:space-y-4 text-xs md:text-sm font-medium">
                                 <li><button onClick={onShowAbout} className="hover:text-blue-500 transition-colors">Hakkımızda</button></li>
-                                <li><a href="#" className="hover:text-blue-500 transition-colors">Kariyer</a></li>
-                                <li><a href="#" className="hover:text-blue-500 transition-colors">İletişim</a></li>
+                                <li><span className="hover:text-blue-500 transition-colors cursor-default">Kariyer</span></li>
+                                <li><span className="hover:text-blue-500 transition-colors cursor-default">İletişim</span></li>
                             </ul>
                         </div>
 
                         <div>
                             <h4 className="text-white font-bold mb-4 md:mb-6 text-sm md:text-base">Yasal</h4>
                             <ul className="space-y-3 md:space-y-4 text-xs md:text-sm font-medium">
-                                <li><a href="#" className="hover:text-blue-500 transition-colors">Gizlilik</a></li>
-                                <li><a href="#" className="hover:text-blue-500 transition-colors">Şartlar</a></li>
+                                <li><span className="hover:text-blue-500 transition-colors cursor-default">Gizlilik</span></li>
+                                <li><span className="hover:text-blue-500 transition-colors cursor-default">Şartlar</span></li>
                             </ul>
                         </div>
                     </div>
@@ -223,8 +223,8 @@ export default function LandingPage({ onStart, onShowFeatures, onShowAbout, dark
                     <div className="pt-8 border-t border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6">
                         <p className="text-[10px] md:text-xs">© 2024 Blink. Tüm hakları saklıdır.</p>
                         <div className="flex items-center gap-6">
-                            <a href="#" className="hover:text-white transition-colors"><svg className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg></a>
-                            <a href="#" className="hover:text-white transition-colors"><svg className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.84 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z" /></svg></a>
+                            <span className="hover:text-white transition-colors cursor-pointer"><svg className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg></span>
+                            <span className="hover:text-white transition-colors cursor-pointer"><svg className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.84 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z" /></svg></span>
                         </div>
                     </div>
                 </div>

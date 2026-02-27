@@ -113,7 +113,7 @@ export default function RegisterPage({ onBack, onGoToLogin, onRegister }: Regist
     }
 
     return (
-        <div className="min-h-screen bg-white dark:bg-slate-950 flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden transition-colors">
+        <div className="min-h-screen bg-white dark:bg-slate-900 flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden transition-colors">
             {/* Background Decorative Elements */}
             <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-50 dark:bg-blue-900/10 rounded-full blur-3xl opacity-60"></div>
             <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-indigo-50 dark:bg-indigo-900/10 rounded-full blur-3xl opacity-60"></div>

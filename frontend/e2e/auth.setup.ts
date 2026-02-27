@@ -36,14 +36,35 @@ setup('authenticate', async ({ page }) => {
     await page.fill(selectors.auth.passwordInput, TEST_USER.password);
     await page.click(selectors.auth.loginSubmit);
 
-    // 6. Wait for successful auth — sidebar or message input should appear
-    await page.waitForSelector(selectors.chat.messageInput + ', ' + selectors.nav.roomsTab, {
-        timeout: 20_000,
-    });
+    // 6. Wait for successful auth navigation OR an error message
+    const authResult = await Promise.race([
+        page.waitForSelector(selectors.nav.roomsTab, { timeout: 10_000 }).then(() => 'success'),
+        page.waitForSelector(selectors.auth.errorMessage, { timeout: 10_000 }).then(() => 'error')
+    ]).catch(() => 'timeout');
 
-    // 7. Verify we're in the chat interface
+    // 7. If login fails due to credentials, fallback to registering the test user
+    if (authResult === 'error') {
+        const registerLink = page.locator(selectors.auth.registerLink);
+        if (await registerLink.isVisible()) {
+            await registerLink.click();
+            await page.waitForSelector(selectors.auth.firstNameInput);
+
+            // Fill Registration form
+            await page.fill(selectors.auth.firstNameInput, 'E2E');
+            await page.fill(selectors.auth.lastNameInput, 'User');
+            await page.fill(selectors.auth.emailInput, TEST_USER.email);
+            await page.fill(selectors.auth.passwordInput, TEST_USER.password);
+            await page.check(selectors.auth.termsCheckbox);
+            await page.click(selectors.auth.registerSubmit);
+
+            // Wait for navigation to chat after successful registration
+            await page.waitForSelector(selectors.nav.roomsTab, { timeout: 20_000 });
+        }
+    }
+
+    // 8. Verify we're in the chat interface
     await expect(page).not.toHaveURL(/login|register|landing/i);
 
-    // 8. Store authenticated state
+    // 9. Store authenticated state
     await page.context().storageState({ path: authFile });
 });

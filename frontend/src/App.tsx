@@ -198,6 +198,11 @@ function App() {
       }
     })
 
+    // URL Hash cleanup (e.g. remove #support or #features after navigation)
+    if (window.location.hash) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+
     // Clean up on unmount
     return () => {
       subscription.unsubscribe()

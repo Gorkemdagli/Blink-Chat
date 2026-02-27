@@ -13,5 +13,9 @@
         "test": "npm run test:backend && npm run test:frontend",
         "e2e": "npm --prefix frontend run e2e",
         "e2e:ui": "npm --prefix frontend run e2e:ui"
+    },
+    "dependencies": {
+        "@supabase/supabase-js": "^2.98.0",
+        "dotenv": "^17.3.1"
     }
 }

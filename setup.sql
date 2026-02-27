@@ -182,23 +182,36 @@ BEGIN
         IF NOT code_exists THEN RETURN new_code; END IF;
     END LOOP;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Handle new user signup (Trigger function)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  base_username TEXT;
+  final_username TEXT;
+  suffix INTEGER := 0;
 BEGIN
+  base_username := COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1));
+  final_username := base_username;
+
+  -- If username already exists, append numeric suffix
+  WHILE EXISTS (SELECT 1 FROM public.users WHERE username = final_username) LOOP
+    suffix := suffix + 1;
+    final_username := base_username || suffix::TEXT;
+  END LOOP;
+
   INSERT INTO public.users (id, username, email, avatar_url, user_code)
   VALUES (
     NEW.id, 
-    COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
+    final_username,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'avatar_url', 'https://ui-avatars.com/api/?name=' || split_part(NEW.email, '@', 1)),
     generate_user_code()
   );
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Handle friend request accepted
 CREATE OR REPLACE FUNCTION handle_friend_request_accepted()

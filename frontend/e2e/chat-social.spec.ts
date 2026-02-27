@@ -61,9 +61,8 @@ test.describe('Social — Group Creation', () => {
     });
 
     test('should open create group modal', async ({ page }) => {
-        // Look for create group button
         const createGroupBtn = page.locator(
-            'button:has-text("Grup"), [title*="Grup"], button:has-text("Oluştur")'
+            'button:has-text("Grup Oluştur"), [title*="Grup"], button:has-text("Oluştur")'
         ).first();
 
         if (!await createGroupBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
@@ -74,13 +73,13 @@ test.describe('Social — Group Creation', () => {
         await createGroupBtn.click();
 
         // Group creation modal
-        await expect(page.locator('input[placeholder*="Grup adı"], input[placeholder*="grup"]').first())
+        await expect(page.locator('input[placeholder*="Grup adı"], input[placeholder*="Örn: Hafta Sonu"]').first())
             .toBeVisible({ timeout: 5_000 });
     });
 
     test('should validate group name is required', async ({ page }) => {
         const createGroupBtn = page.locator(
-            'button:has-text("Grup"), [title*="Grup"], button:has-text("Oluştur")'
+            'button:has-text("Grup Oluştur"), [title*="Grup"], button:has-text("Oluştur")'
         ).first();
 
         if (!await createGroupBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
@@ -96,7 +95,7 @@ test.describe('Social — Group Creation', () => {
             await submitBtn.click();
 
             // Should remain on modal (group name is required)
-            await expect(page.locator('input[placeholder*="Grup adı"], input[placeholder*="grup"]').first())
+            await expect(page.locator('input[placeholder*="Grup adı"], input[placeholder*="Örn: Hafta Sonu"]').first())
                 .toBeVisible({ timeout: 3_000 });
         }
     });

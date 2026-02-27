@@ -9,7 +9,7 @@ describe('Socket Validators', () => {
         });
 
         it('should validate valid file message', () => {
-            const data = { roomId: 'room1', userId: 'user1', content: '', fileUrl: 'http://test.com/file.png', messageType: 'image', fileName: 'file.png' };
+            const data = { roomId: 'room1', userId: 'user1', content: '', fileUrl: 'https://mock.supabase.co/storage/v1/object/public/chat-files/file.png', messageType: 'image', fileName: 'file.png' };
             const result = MessageDataSchema.safeParse(data);
             expect(result.success).toBe(true);
         });
