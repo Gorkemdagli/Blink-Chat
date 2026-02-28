@@ -42,12 +42,13 @@ setup('authenticate', async ({ page }) => {
         page.waitForSelector(selectors.auth.errorMessage, { timeout: 10_000 }).then(() => 'error')
     ]).catch(() => 'timeout');
 
-    // 7. If login fails due to credentials, fallback to registering the test user
-    if (authResult === 'error') {
+    // 7. If login fails or times out, fallback to registering the test user
+    if (authResult === 'error' || authResult === 'timeout') {
+        console.log(`Auth setup: Login ${authResult}, attempting registration...`);
         const registerLink = page.locator(selectors.auth.registerLink);
-        if (await registerLink.isVisible()) {
+        if (await registerLink.isVisible({ timeout: 5000 }).catch(() => false)) {
             await registerLink.click();
-            await page.waitForSelector(selectors.auth.firstNameInput);
+            await page.waitForSelector(selectors.auth.firstNameInput, { timeout: 10_000 });
 
             // Fill Registration form
             await page.fill(selectors.auth.firstNameInput, 'E2E');
@@ -59,12 +60,28 @@ setup('authenticate', async ({ page }) => {
 
             // Wait for navigation to chat after successful registration
             await page.waitForSelector(selectors.nav.roomsTab, { timeout: 20_000 });
+        } else if (authResult === 'timeout') {
+            throw new Error('Login timed out and registration link not found.');
         }
     }
 
     // 8. Verify we're in the chat interface
     await expect(page).not.toHaveURL(/login|register|landing/i);
 
-    // 9. Store authenticated state
+    // 9. Ensure at least one room exists for tests
+    await page.waitForTimeout(2000); // Give rooms time to load
+
+    // Check if there are any clickable rooms
+    const roomItems = page.locator('button').filter({
+        has: page.locator('span.font-semibold')
+    });
+
+    const rootCount = await roomItems.count();
+
+    if (rootCount === 0) {
+        console.log('WARNING: No rooms found. Tests requiring a room will likely skip/fail. Make sure the database triggers are assigning the Genel room to this user.');
+    }
+
+    // 10. Store authenticated state
     await page.context().storageState({ path: authFile });
 });

@@ -69,11 +69,10 @@ if (process.env.NODE_ENV !== 'test') {
     scheduleCleanup();
 }
 
-// Start server (only if run directly)
-// In ES modules, require.main === module is replaced by checking process.argv or import.meta.url
-// However, since we might be running via ts-node or compiled code, simpler check is if it's not imported.
-// But mostly in TS/Node standard pattern, we just listen if not in test env.
-if (process.env.NODE_ENV !== 'test') {
+// Start server (only if run directly and not in test/worker environment)
+const isTestEnv = process.env.NODE_ENV === 'test' || !!process.env.JEST_WORKER_ID || !!process.env.VITEST_WORKER_ID;
+
+if (!isTestEnv) {
     const PORT = process.env.PORT || 3000;
     server.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);

@@ -103,11 +103,13 @@ describe('Performance Tests', () => {
                 });
 
                 // Send a message from first client
-                testClients[0].emit('sendMessage', {
-                    roomId,
-                    userId: 'test-user',
-                    content: 'Load test message'
-                });
+                setTimeout(() => {
+                    testClients[0].emit('sendMessage', {
+                        roomId,
+                        userId: 'test-user',
+                        content: 'Load test message'
+                    });
+                }, 500);
             });
         }, 15000);
     });

@@ -78,7 +78,7 @@ export default function ChatHeader({
     }
 
     return (
-        <header className="h-[64px] md:h-[72px] flex items-center justify-between px-4 md:px-6 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 shrink-0">
+        <header data-testid="chat-header" className="h-[64px] md:h-[72px] flex items-center justify-between px-4 md:px-6 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 shrink-0">
             <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
                 <button
                     onClick={onBack}

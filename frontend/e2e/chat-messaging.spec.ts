@@ -54,9 +54,10 @@ test.describe('Chat Interface — Core', () => {
         await page.waitForTimeout(3_000);
 
         // Find any clickable room item in the sidebar
-        const roomItems = page.locator('[class*="cursor-pointer"]').filter({
-            has: page.locator('[class*="truncate"], [class*="font-"]'),
-        });
+        // Simplify selector to catch buttons inside the rooms panel
+        const roomItems = page.locator('#odalar-panel button, [aria-labelledby="odalar-tab"] button')
+            .filter({ has: page.locator('span.font-semibold') })
+            .filter({ hasNotText: /Henüz oda yok/i });
 
         const roomCount = await roomItems.count();
         if (roomCount === 0) {
@@ -66,6 +67,9 @@ test.describe('Chat Interface — Core', () => {
 
         // Click first room
         await roomItems.first().click();
+
+        // Wait for chat to open by looking for the header
+        await page.waitForSelector(selectors.chat.chatHeader, { timeout: 10_000 });
 
         // Message input should appear
         const messageInput = page.locator(selectors.chat.messageInput);
@@ -77,9 +81,9 @@ test.describe('Chat Interface — Core', () => {
         await page.waitForTimeout(3_000);
 
         // Open first room
-        const roomItems = page.locator('[class*="cursor-pointer"]').filter({
-            has: page.locator('[class*="truncate"], [class*="font-"]'),
-        });
+        const roomItems = page.locator('#odalar-panel button, [aria-labelledby="odalar-tab"] button')
+            .filter({ has: page.locator('span.font-semibold') })
+            .filter({ hasNotText: /Henüz oda yok/i });
 
         const roomCount = await roomItems.count();
         if (roomCount === 0) {
@@ -108,9 +112,9 @@ test.describe('Chat Interface — Core', () => {
         await page.waitForTimeout(2_000);
 
         // Open first room
-        const roomItems = page.locator('[class*="cursor-pointer"]').filter({
-            has: page.locator('[class*="truncate"], [class*="font-"]'),
-        });
+        const roomItems = page.locator('#odalar-panel button, [aria-labelledby="odalar-tab"] button')
+            .filter({ has: page.locator('span.font-semibold') })
+            .filter({ hasNotText: /Henüz oda yok/i });
 
         const roomCount = await roomItems.count();
         if (roomCount === 0) {
@@ -134,9 +138,9 @@ test.describe('Chat Interface — Input Behavior', () => {
         await page.waitForTimeout(3_000);
 
         // Open first room
-        const roomItems = page.locator('[class*="cursor-pointer"]').filter({
-            has: page.locator('[class*="truncate"], [class*="font-"]'),
-        });
+        const roomItems = page.locator('#odalar-panel button, [aria-labelledby="odalar-tab"] button')
+            .filter({ has: page.locator('span.font-semibold') })
+            .filter({ hasNotText: /Henüz oda yok/i });
 
         const count = await roomItems.count();
         if (count > 0) {
@@ -151,6 +155,9 @@ test.describe('Chat Interface — Input Behavior', () => {
             test.skip(true, 'No room open');
             return;
         }
+
+        // Wait to make sure previous messages have loaded from DB
+        await page.waitForTimeout(2000);
 
         // Count current messages
         const messagesBefore = await page.locator('[class*="message"], [class*="bubble"]').count();
