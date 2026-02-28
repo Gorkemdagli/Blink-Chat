@@ -2,6 +2,10 @@ import { MessageDataSchema, MarkReadSchema, TypingSchema, StopTypingSchema } fro
 
 describe('Socket Validators', () => {
     describe('MessageDataSchema', () => {
+        beforeAll(() => {
+            process.env.SUPABASE_URL = 'https://mock.supabase.co';
+        });
+
         it('should validate valid text message', () => {
             const data = { roomId: 'room1', userId: 'user1', content: 'hello' };
             const result = MessageDataSchema.safeParse(data);

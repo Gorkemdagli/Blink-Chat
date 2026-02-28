@@ -382,6 +382,17 @@ CREATE TRIGGER on_friend_request_response BEFORE UPDATE ON public.friend_request
 DROP TRIGGER IF EXISTS on_invitation_response ON public.room_invitations;
 CREATE TRIGGER on_invitation_response BEFORE UPDATE ON public.room_invitations FOR EACH ROW EXECUTE FUNCTION public.handle_invitation_accepted();
 
+-- Add creator as member (modified to handle null created_by for system rooms)
+CREATE OR REPLACE FUNCTION public.auto_add_room_creator_as_member()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.type = 'private' AND NEW.created_by IS NOT NULL THEN
+    INSERT INTO public.room_members (room_id, user_id) VALUES (NEW.id, NEW.created_by) ON CONFLICT DO NOTHING;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 DROP TRIGGER IF EXISTS on_room_created_add_creator ON public.rooms;
 CREATE TRIGGER on_room_created_add_creator AFTER INSERT ON public.rooms FOR EACH ROW WHEN (NEW.type = 'private') EXECUTE FUNCTION public.auto_add_room_creator_as_member();
 
@@ -506,5 +517,40 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.room_members;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.friend_requests;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.friends;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.room_invitations;
+
+-- ============================================
+-- 8. DEFAULT ROOM & AUTO-ENROLLMENT
+-- ============================================
+
+-- Create a fixed-ID General Room if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM public.rooms WHERE id = '00000000-0000-0000-0000-000000000000') THEN
+        INSERT INTO public.rooms (id, name, type, created_at)
+        VALUES ('00000000-0000-0000-0000-000000000000', 'Genel', 'private', now());
+    END IF;
+END $$;
+
+-- Trigger function to add new users to the 'Genel' room
+CREATE OR REPLACE FUNCTION public.add_new_user_to_general_room()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.room_members (room_id, user_id)
+    VALUES ('00000000-0000-0000-0000-000000000000', NEW.id)
+    ON CONFLICT DO NOTHING;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Add trigger to users table
+DROP TRIGGER IF EXISTS on_user_created_add_to_general ON public.users;
+CREATE TRIGGER on_user_created_add_to_general
+    AFTER INSERT ON public.users
+    FOR EACH ROW EXECUTE FUNCTION public.add_new_user_to_general_room();
+
+-- Add existing users to General Room
+INSERT INTO public.room_members (room_id, user_id)
+SELECT '00000000-0000-0000-0000-000000000000', id FROM public.users
+ON CONFLICT DO NOTHING;
 
 COMMIT;

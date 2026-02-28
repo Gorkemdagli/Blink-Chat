@@ -24,7 +24,7 @@ test.describe('Social — Friends Tab', () => {
         await page.waitForTimeout(1_000);
 
         // Friends list or empty state should be visible
-        const hasFriendsList = await page.locator('[class*="friend"], text=Arkadaş').first()
+        const hasFriendsList = await page.locator('#arkadaşlar-panel').first()
             .isVisible({ timeout: 5_000 }).catch(() => false);
         expect(hasFriendsList).toBe(true);
     });
@@ -40,7 +40,7 @@ test.describe('Social — Friends Tab', () => {
         await page.waitForTimeout(1_000);
 
         // Find and click add friend button
-        const addFriendBtn = page.locator('button:has-text("Arkadaş Ekle"), [title*="Arkadaş"], button:has(svg)').first();
+        const addFriendBtn = page.locator('button[title="Arkadaş Ekle"]').first();
         if (!await addFriendBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
             test.skip(true, 'Add friend button not found');
             return;
@@ -61,9 +61,7 @@ test.describe('Social — Group Creation', () => {
     });
 
     test('should open create group modal', async ({ page }) => {
-        const createGroupBtn = page.locator(
-            'button:has-text("Grup Oluştur"), [title*="Grup"], button:has-text("Oluştur")'
-        ).first();
+        const createGroupBtn = page.locator('button[title="Yeni Grup Oluştur"]').first();
 
         if (!await createGroupBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
             test.skip(true, 'Create group button not visible');
@@ -78,9 +76,7 @@ test.describe('Social — Group Creation', () => {
     });
 
     test('should validate group name is required', async ({ page }) => {
-        const createGroupBtn = page.locator(
-            'button:has-text("Grup Oluştur"), [title*="Grup"], button:has-text("Oluştur")'
-        ).first();
+        const createGroupBtn = page.locator('button[title="Yeni Grup Oluştur"]').first();
 
         if (!await createGroupBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
             test.skip(true, 'Create group button not visible');

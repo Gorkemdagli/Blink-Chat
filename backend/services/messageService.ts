@@ -39,13 +39,19 @@ export class MessageService {
 
         let user;
         const cacheKey = `user:${userId}`;
-        const cachedUser = await redis.get(cacheKey);
+        let cachedUser = null;
+
+        try {
+            cachedUser = await redis.get(cacheKey);
+        } catch (err) {
+            logger.warn(`Redis get error, falling back to DB for user ${userId}`, err);
+        }
 
         if (cachedUser) {
             logger.debug(`Redis cache hit for user: ${userId}`);
             user = JSON.parse(cachedUser);
         } else {
-            logger.debug(`Redis cache miss, fetching from DB: ${userId}`);
+            logger.debug(`Redis cache miss or error, fetching from DB: ${userId}`);
             const { data: dbUser, error: userError } = await supabase
                 .from('users')
                 .select('id, username, email, user_code, avatar_url')
@@ -56,7 +62,11 @@ export class MessageService {
                 logger.error('Error fetching user:', userError);
             } else {
                 user = dbUser;
-                await redis.set(cacheKey, JSON.stringify(user), 'EX', 3600);
+                try {
+                    await redis.set(cacheKey, JSON.stringify(user), 'EX', 3600);
+                } catch (err) {
+                    logger.warn(`Redis set error for user ${userId}`, err);
+                }
             }
         }
 
