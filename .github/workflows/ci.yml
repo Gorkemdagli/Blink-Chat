@@ -1,10 +1,16 @@
-name: CI
+# CI Workflow - Triggering run
+name: Optimization CI Test
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - dev
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - dev
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
