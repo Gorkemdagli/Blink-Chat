@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: blink-chat-backend
+    env: docker
+    plan: free # Veya ihtiyaca göre 'starter'
+    region: frankfurt # Türkiye'ye en yakın stabil bölge
+    dockerfilePath: backend/Dockerfile
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: FRONTEND_URL
+        fromContext: frontend_url # Render'da tanımlanacak veya Vercel URL'si
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: REDIS_HOST
+        sync: false
+      - key: REDIS_PORT
+        value: "6379"
+      - key: REDIS_PASSWORD
+        sync: false
+      - key: REDIS_TLS
+        value: "true"
+      - key: SWAGGER_USER
+        value: admin
+      - key: SWAGGER_PASSWORD
+        sync: false
+    healthCheckPath: /health
+    autoDeploy: true
