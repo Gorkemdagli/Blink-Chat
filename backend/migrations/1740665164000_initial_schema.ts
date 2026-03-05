@@ -3,9 +3,9 @@ import { MigrationBuilder, ColumnDefinitions } from 'node-pg-migrate';
 export const shorthands: ColumnDefinitions | undefined = undefined;
 
 export async function up(pgm: MigrationBuilder): Promise<void> {
-    // We use the existing setup.sql content, but stripped of BEGIN/COMMIT
-    // and some publication drops that might be problematic if not superuser
-    pgm.sql(`
+  // We use the existing setup.sql content, but stripped of BEGIN/COMMIT
+  // and some publication drops that might be problematic if not superuser
+  pgm.sql(`
 -- 1. REALTIME PUBLICATION SETUP
 DROP PUBLICATION IF EXISTS supabase_realtime;
 CREATE PUBLICATION supabase_realtime;
@@ -230,6 +230,10 @@ CREATE OR REPLACE FUNCTION is_room_member(room_id UUID) RETURNS BOOLEAN AS $$
   SELECT EXISTS(SELECT 1 FROM public.room_members WHERE room_id = $1 AND user_id = auth.uid());
 $$ LANGUAGE sql STABLE SECURITY DEFINER;
 
+CREATE OR REPLACE FUNCTION is_room_creator(check_room_id UUID) RETURNS BOOLEAN AS $$
+  SELECT EXISTS(SELECT 1 FROM public.rooms WHERE id = $1 AND created_by = auth.uid());
+$$ LANGUAGE sql STABLE SECURITY DEFINER;
+
 -- 5. TRIGGERS
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
@@ -257,13 +261,13 @@ CREATE POLICY "Users can update own profile" ON public.users FOR UPDATE TO authe
 CREATE POLICY "Users can view messages in their rooms" ON public.messages FOR SELECT USING (is_room_member(room_id));
 CREATE POLICY "Users can insert messages in their rooms" ON public.messages FOR INSERT WITH CHECK (is_room_member(room_id));
 CREATE POLICY "Users can delete own messages" ON public.messages FOR DELETE USING (auth.uid() = user_id);
-CREATE POLICY "Members see private rooms" ON public.rooms FOR SELECT USING (id IN (SELECT room_id FROM public.room_members WHERE user_id = auth.uid()));
+CREATE POLICY "Members see private rooms" ON public.rooms FOR SELECT USING (is_room_member(id) OR created_by = auth.uid());
 CREATE POLICY "Auth users create rooms" ON public.rooms FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 CREATE POLICY "Owners can update rooms" ON public.rooms FOR UPDATE USING (auth.uid() = created_by);
-CREATE POLICY "View members" ON public.room_members FOR SELECT USING (EXISTS (SELECT 1 FROM public.room_members rm WHERE rm.room_id = room_members.room_id AND rm.user_id = auth.uid()));
+CREATE POLICY "View members" ON public.room_members FOR SELECT USING (is_room_member(room_id));
 CREATE POLICY "Self join" ON public.room_members FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Owners can add members" ON public.room_members FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM public.rooms r WHERE r.id = room_id AND r.created_by = auth.uid()));
-CREATE POLICY "Owners or self can remove members" ON public.room_members FOR DELETE USING (EXISTS (SELECT 1 FROM public.rooms r WHERE r.id = room_id AND r.created_by = auth.uid()) OR auth.uid() = user_id);
+CREATE POLICY "Owners can add members" ON public.room_members FOR INSERT WITH CHECK (is_room_creator(room_id));
+CREATE POLICY "Owners or self can remove members" ON public.room_members FOR DELETE USING (is_room_creator(room_id) OR auth.uid() = user_id);
 
 -- 6.5 STORAGE SETUP (Requires bucket manually usually, but inserting records)
 -- (Skipping buckets insert here as it might conflict with existing Supabase storage management)
@@ -280,7 +284,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.room_invitations;
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
-    pgm.sql(`
+  pgm.sql(`
     DROP VIEW IF EXISTS public.friends_with_details;
     DROP VIEW IF EXISTS public.pending_friend_requests_with_details;
     DROP VIEW IF EXISTS public.pending_invitations_with_details;

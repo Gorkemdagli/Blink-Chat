@@ -1,8 +1,6 @@
-<div align="center">
+# ⚡ Blink-Chat
 
-# Blink-Chat
-
-**Gerçek zamanlı, güvenli ve modern bir mesajlaşma uygulaması.**
+**Mühendislik ve estetiğin buluştuğu nokta: Ultra-hızlı, güvenli ve avant-garde bir mesajlaşma deneyimi.**
 
 [![Status](https://img.shields.io/badge/status-active-4ade80?style=flat-square)](https://github.com/Gorkemdagli/Blink-Chat)
 [![License](https://img.shields.io/badge/license-MIT-60a5fa?style=flat-square)](LICENSE)
@@ -10,26 +8,26 @@
 [![Node.js](https://img.shields.io/badge/Node.js-Express-339933?style=flat-square&logo=node.js)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org)
 
-</div>
+---
+
+## 🚀 Temel Vizyon
+
+Blink-Chat, modern web standartlarının sınırlarını zorlayan, düşük gecikmeli (low-latency) iletişim protokolleri ve rafine bir kullanıcı deneyimi üzerine inşa edilmiş bir ekosistemdir. Sadece bir mesajlaşma aracı değil; ölçeklenebilir backend mimarisi ile premium UI tasarımını harmanlayan bir mühendislik çalışmasıdır.
 
 ---
 
-## Ne Yapar?
+## 💎 Öne Çıkan Özellikler
 
-Blink-Chat; anlık mesajlaşma, dosya paylaşımı ve okundu bilgisi gibi modern iletişim ihtiyaçlarını karşılayan bir web uygulamasıdır. Hesap oluşturun, arkadaş ekleyin, her cihazdan mesajlaşın.
-
-### Özellikler
-
-| | |
+| Özellik | Teknik Arka Plan |
 |---|---|
-| ⚡ **Anlık Mesajlaşma** | Socket.IO ile gecikme olmaksızın mesaj iletimi |
-| ✅ **Okundu Bilgisi** | İletildi (gri) ve okundu (mavi) tik sistemi |
-| ✍️ **Yazıyor Göstergesi** | Karşı tarafın yazdığını anlık görün |
-| 🟢 **Online Durumu** | Kullanıcıların çevrimiçi/çevrimdışı takibi |
-| 📎 **Dosya Paylaşımı** | Görsel ve belge gönderme, önizleme desteği |
-| 😊 **Emoji Seçici** | Entegre emoji paneli |
-| 🌓 **Koyu / Açık Tema** | Sistem temasına uyumlu, tam geçiş desteği |
-| 📱 **Tam Responsive** | Masaüstü, tablet ve mobil için optimize |
+| ⚡ **Real-Time Engine** | Socket.IO 4 + Redis L2 Caching ile mikro-saniye bazlı mesaj iletimi. |
+| 🛡️ **Edge-Ready Security** | Supabase RLS (Row Level Security) ve scope-bazlı JWT doğrulama ile %100 veri izolasyonu. |
+| 📎 **Smart Media Handling** | S3 uyumlu storage üzerinde otomatik sıkıştırma ve stream-bazlı dosya transferi. |
+| 🌓 **Adaptive UI** | Glassmorphism ve dinamik renk paletleri ile sistem temasına duyarlı premium arayüz. |
+| ✅ **Presence System** | Redis-backed heartbeat mekanizması ile hatasız çevrimiçi/çevrimdışı takibi. |
+| ✍️ **Ghost Typing** | Optimize edilmiş debouncing ile gerçek zamanlı yazıyor göstergesi. |
+| 🤖 **Bot-Proof Auth** | Entegre hCaptcha koruması ve normalize edilmiş hata yönetim sistemi. |
+| 📱 **Cross-Platform Flux** | Tüm cihazlarda aynı akıcılıkta çalışan fully-responsive ergonomi. |
 
 ---
 

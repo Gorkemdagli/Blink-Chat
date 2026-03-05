@@ -109,7 +109,7 @@ export function useChatActions(session: Session, state: ChatState, dataFunctions
             setCurrentRoom(realRoom)
         }
 
-        const socket = getSocket()
+        const socket = getSocket(session.access_token)
         socket.emit('sendMessage', {
             roomId: targetRoomId,
             userId: session.user.id,
@@ -170,7 +170,7 @@ export function useChatActions(session: Session, state: ChatState, dataFunctions
             setCurrentRoom(realRoom)
         }
 
-        const socket = getSocket()
+        const socket = getSocket(session.access_token)
         socket.emit('sendMessage', {
             roomId: targetRoomId,
             userId: session.user.id,

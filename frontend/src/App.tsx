@@ -171,6 +171,7 @@ function App() {
         // Token refreshed - check if session is still valid and update last active
         if (isSessionValid(session)) {
           updateLastActive(session)
+          setSocketToken(session.access_token)
           setSession(session)
           setLoading(false)
         } else {
@@ -181,6 +182,7 @@ function App() {
         // Initial session load - check if it's valid and not inactive
         if (session && isSessionValid(session)) {
           updateLastActive(session)
+          setSocketToken(session.access_token)
           setSession(session)
           setLoading(false)
         } else {
@@ -190,8 +192,10 @@ function App() {
       } else {
         // Other events - just set session if valid
         if (session && isSessionValid(session)) {
+          setSocketToken(session.access_token)
           setSession(session)
         } else {
+          setSocketToken(null)
           setSession(null)
         }
         setLoading(false)

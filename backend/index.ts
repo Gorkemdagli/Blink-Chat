@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Validate environment variables early
-import './config/env';
+import { env } from './config/env';
 
 import express from 'express';
 import http from 'http';
@@ -34,7 +34,7 @@ app.use(express.json());
 
 // Swagger Docs with Basic Auth
 app.use('/api-docs', basicAuth({
-    users: { [process.env.SWAGGER_USER || 'admin']: process.env.SWAGGER_PASSWORD || 'admin' },
+    users: { [env.SWAGGER_USER]: env.SWAGGER_PASSWORD },
     challenge: true,
     realm: 'SwaggerDocs',
 }), swaggerUi.serve, swaggerUi.setup(swaggerSpecs));

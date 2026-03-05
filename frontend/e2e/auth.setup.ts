@@ -31,9 +31,10 @@ setup('authenticate', async ({ page }) => {
         }
     }
 
-    // 5. Fill credentials and submit
+    // 5. Fill credentials
     await page.fill(selectors.auth.emailInput, TEST_USER.email);
     await page.fill(selectors.auth.passwordInput, TEST_USER.password);
+
     await page.click(selectors.auth.loginSubmit);
 
     // 6. Wait for successful auth navigation OR an error message
@@ -56,6 +57,7 @@ setup('authenticate', async ({ page }) => {
             await page.fill(selectors.auth.emailInput, TEST_USER.email);
             await page.fill(selectors.auth.passwordInput, TEST_USER.password);
             await page.check(selectors.auth.termsCheckbox);
+
             await page.click(selectors.auth.registerSubmit);
 
             // Wait for navigation to chat after successful registration

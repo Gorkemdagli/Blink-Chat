@@ -1,4 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
+export interface EmojiClickData {
+  id: string;
+  name: string;
+  native: string;
+  unified: string;
+  keywords: string[];
+  shortcodes: string;
+}
 import { X, Download } from 'lucide-react'
 import { Session } from '@supabase/supabase-js'
 import { supabase } from '../supabaseClient'
@@ -110,7 +118,7 @@ export default function ChatWindow({
   useEffect(() => {
     if (!selectedRoom) return
 
-    const socket = getSocket()
+    const socket = getSocket(session.access_token)
     if (!socket) return
 
     const handleTyping = ({ userId, username, isTyping }: { userId: string, username: string, isTyping: boolean }) => {
@@ -161,7 +169,7 @@ export default function ChatWindow({
     const now = Date.now()
     if (now - lastMarkReadRef.current < 2000) return
 
-    const socket = getSocket()
+    const socket = getSocket(session.access_token)
     if (document.visibilityState === 'visible') {
       const hasUnread = messages.some(m => m.user_id !== session.user.id && m.status !== 'read')
       if (hasUnread) {
@@ -175,7 +183,7 @@ export default function ChatWindow({
     setInputValue(e.target.value)
 
     // Emit typing event
-    const socket = getSocket()
+    const socket = getSocket(session.access_token)
     if (socket && selectedRoom) {
       const username = currentUser?.username || session.user.email?.split('@')[0] || 'Unknown';
       socket.emit('typing', { roomId: selectedRoom.id, userId: session.user.id, username })
@@ -336,7 +344,7 @@ export default function ChatWindow({
 
       // Sadece gerçekten YENİ bir mesaj geldiyse (en sona eklenen id değiştiyse) işlem yap
       if (currentLastId !== lastMessageIdRef.current) {
-        const isMyMessage = lastMessage?.user_id === session?.user?.id || (lastMessage as any)?.sender === 'me'
+        const isMyMessage = lastMessage?.user_id === session?.user?.id || lastMessage?.sender === 'me'
         const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150
 
         // Eğer mesaj benden geldiyse VEYA kullanıcı zaten en alttaysa aşağı kaydır
@@ -426,8 +434,8 @@ export default function ChatWindow({
     const file = e.target.files?.[0]
     if (!file) return
 
-    if (file.size > 50 * 1024 * 1024) { // 50MB limit
-      showToast?.('Dosya boyutu 50MB\'dan büyük olamaz!', 'error')
+    if (file.size > 25 * 1024 * 1024) { // 25MB limit
+      showToast?.('Dosya boyutu 25MB\'dan büyük olamaz!', 'error')
       return
     }
 
@@ -458,8 +466,8 @@ export default function ChatWindow({
     if (files && files.length > 0) {
       const file = files[0]
 
-      if (file.size > 50 * 1024 * 1024) { // 50MB limit
-        showToast?.('Dosya boyutu 50MB\'dan büyük olamaz!', 'error')
+      if (file.size > 25 * 1024 * 1024) { // 25MB limit
+        showToast?.('Dosya boyutu 25MB\'dan büyük olamaz!', 'error')
         return
       }
 
@@ -546,7 +554,7 @@ export default function ChatWindow({
     }
   }
 
-  const handleEmojiSelect = (emoji: any) => {
+  const handleEmojiSelect = (emoji: EmojiClickData) => {
     setInputValue(prev => prev + emoji.native)
     setShowEmojiPicker(false)
   }

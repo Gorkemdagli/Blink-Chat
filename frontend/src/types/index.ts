@@ -45,6 +45,7 @@ export interface Message {
     file_name?: string
     file_size?: number
     status?: 'sent' | 'delivered' | 'read'
+    sender?: string
 }
 
 export interface FriendRequest {

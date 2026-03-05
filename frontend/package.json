@@ -19,6 +19,7 @@
   "dependencies": {
     "@emoji-mart/data": "^1.2.1",
     "@emoji-mart/react": "^1.1.1",
+    "@hcaptcha/react-hcaptcha": "^2.0.2",
     "@supabase/supabase-js": "^2.86.0",
     "autoprefixer": "^10.4.22",
     "dompurify": "^3.3.1",

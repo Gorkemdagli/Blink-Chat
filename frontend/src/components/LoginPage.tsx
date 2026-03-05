@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Chrome, Github } from 'lucide-react'
+import HCaptcha from '@hcaptcha/react-hcaptcha'
 import { supabase } from '../supabaseClient'
 
 interface LoginPageProps {
@@ -15,20 +16,43 @@ export default function LoginPage({ onBack, onLogin, onGoToRegister }: LoginPage
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [rememberMe, setRememberMe] = useState(false)
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+    const captchaRef = useRef<any>(null)
+    const sitekey = import.meta.env.VITE_HCAPTCHA_SITE_KEY || '10000000-ffff-ffff-ffff-000000000001'
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
+
+        let effectiveToken = captchaToken
+
+        // hCaptcha Mock Bypass for E2E/Test environments
+        const isTestKey = sitekey === '10000000-ffff-ffff-ffff-000000000001'
+        if (!effectiveToken && isTestKey) {
+            effectiveToken = '10000000-aaaa-bbbb-cccc-000000000001'
+        }
+
+        if (!effectiveToken) {
+            setError('Lütfen insan olduğunuzu doğrulayın')
+            return
+        }
+
         setLoading(true)
         setError(null)
 
         try {
             const { data, error: authError } = await supabase.auth.signInWithPassword({
                 email,
-                password
+                password,
+                options: {
+                    captchaToken: effectiveToken
+                }
             })
 
             if (authError) {
-                setError(authError.message)
+                console.error('Login error:', authError.message)
+                setError('Geçersiz e-posta veya şifre')
+                captchaRef.current?.resetCaptcha()
+                setCaptchaToken(null)
                 setLoading(false)
                 return
             }
@@ -44,7 +68,8 @@ export default function LoginPage({ onBack, onLogin, onGoToRegister }: LoginPage
                 onLogin(data.session)
             }
         } catch (err: any) {
-            setError(err.message || 'Giriş yapılırken bir hata oluştu')
+            console.error('Login error:', err)
+            setError('Bir hata oluştu, lütfen tekrar deneyin')
         } finally {
             setLoading(false)
         }
@@ -60,10 +85,12 @@ export default function LoginPage({ onBack, onLogin, onGoToRegister }: LoginPage
                 }
             })
             if (authError) {
-                setError(authError.message)
+                console.error('Google login error:', authError.message)
+                setError('Giriş yapılamadı, lütfen tekrar deneyin')
             }
         } catch (err: any) {
-            setError(err.message || 'Google ile giriş yapılırken bir hata oluştu')
+            console.error('Google login error:', err)
+            setError('Giriş yapılamadı, lütfen tekrar deneyin')
         } finally {
             setLoading(false)
         }
@@ -79,10 +106,12 @@ export default function LoginPage({ onBack, onLogin, onGoToRegister }: LoginPage
                 }
             })
             if (authError) {
-                setError(authError.message)
+                console.error('GitHub login error:', authError.message)
+                setError('Giriş yapılamadı, lütfen tekrar deneyin')
             }
         } catch (err: any) {
-            setError(err.message || 'GitHub ile giriş yapılırken bir hata oluştu')
+            console.error('GitHub login error:', err)
+            setError('Giriş yapılamadı, lütfen tekrar deneyin')
         } finally {
             setLoading(false)
         }
@@ -111,7 +140,10 @@ export default function LoginPage({ onBack, onLogin, onGoToRegister }: LoginPage
 
                 <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[32px] p-8 md:p-10 shadow-2xl shadow-slate-200/50 dark:shadow-none transition-colors">
                     {error && (
-                        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded-xl text-red-600 dark:text-red-400 text-sm font-medium">
+                        <div
+                            data-testid="error-message"
+                            className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded-xl text-red-600 dark:text-red-400 text-sm font-medium"
+                        >
                             {error}
                         </div>
                     )}
@@ -169,6 +201,15 @@ export default function LoginPage({ onBack, onLogin, onGoToRegister }: LoginPage
                                 <span className="font-bold text-slate-500 dark:text-gray-400 group-hover:text-slate-700 dark:group-hover:text-gray-200 transition-colors">Beni Hatırla</span>
                             </label>
                             <a href="#" className="font-bold text-blue-600 dark:text-sky-400 hover:text-blue-700 dark:hover:text-sky-300 transition-colors">Şifremi Unuttum</a>
+                        </div>
+
+                        <div className="flex justify-center my-4 overflow-hidden rounded-xl">
+                            <HCaptcha
+                                ref={captchaRef}
+                                sitekey={sitekey}
+                                onVerify={(token) => setCaptchaToken(token)}
+                                onExpire={() => setCaptchaToken(null)}
+                            />
                         </div>
 
                         <button

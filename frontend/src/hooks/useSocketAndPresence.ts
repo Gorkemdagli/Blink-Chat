@@ -47,7 +47,7 @@ export function useSocketAndPresence(session: Session, state: ChatState, dataFun
     // Ana effect: Socket ve Presence bağlantıları
     useEffect(() => {
         // Global Socket.IO listener
-        const socket = getSocket()
+        const socket = getSocket(session.access_token)
 
         const handleUnifiedNewMessage = (messageWithUser: any) => {
             // 1. Sidebar güncelleme (son mesaj)
@@ -351,7 +351,7 @@ export function useSocketAndPresence(session: Session, state: ChatState, dataFun
     // Odalar yüklendiğinde tüm odalara join ol (Socket.IO room-based broadcast için)
     useEffect(() => {
         if (state.rooms.length === 0) return
-        const socket = getSocket()
+        const socket = getSocket(session.access_token)
         state.rooms.forEach(room => {
             if (room.id && !room.is_provisional) {
                 socket.emit('joinRoom', room.id)

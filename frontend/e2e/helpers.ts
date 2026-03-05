@@ -37,7 +37,7 @@ export const selectors = {
         registerSubmit: 'button:has-text("Kaydı Tamamla")',
         registerLink: 'text=Ücretsiz Kayıt Olun',
         loginLink: 'text=Giriş Yapın',
-        errorMessage: '.bg-red-50, .bg-red-900\\/20',
+        errorMessage: '[data-testid="error-message"]',
         backButton: 'text=Anasayfaya Dön',
         rememberMe: 'text=Beni Hatırla',
         firstNameInput: 'input[name="firstName"]',

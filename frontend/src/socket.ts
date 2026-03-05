@@ -13,14 +13,25 @@ let currentToken: string | null = null
 export const setSocketToken = (token: string | null) => {
     currentToken = token
 
-    // Eğer token değiştiyse ve aktif bağlantı varsa, yeniden bağlan
-    if (socket && token && socket.connected) {
+    // Socket bağlantısı varsa auth objesini her zaman güncelle
+    if (socket) {
         socket.auth = { token }
-        socket.disconnect().connect()
+
+        // Eğer token değiştiyse ve aktif bağlantı varsa, yeniden bağlan
+        if (token && socket.connected) {
+            socket.disconnect().connect()
+        } else if (token && !socket.connected) {
+            // Bağlı değilse fakat token geldiyse bağlanmayı dene
+            socket.connect()
+        }
     }
 }
 
-export const getSocket = (): Socket => {
+export const getSocket = (token?: string | null): Socket => {
+    if (token) {
+        currentToken = token
+    }
+
     if (isInitializing && socket) {
         return socket
     }
@@ -58,10 +69,15 @@ export const getSocket = (): Socket => {
             // Token güncelleyip yeniden bağlan
             if (currentToken) {
                 socket.auth = { token: currentToken }
+                socket.connect()
             }
-            socket.connect()
         }
+    } else if (socket && socket.connected && currentToken && (socket as any).auth?.token !== currentToken) {
+        // Token changed while connected, reconnect
+        socket.auth = { token: currentToken }
+        socket.disconnect().connect()
     }
+
     return socket as Socket
 }
 

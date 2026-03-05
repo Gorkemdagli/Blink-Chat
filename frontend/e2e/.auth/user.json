@@ -1,12 +1,23 @@
 {
-  "cookies": [],
+  "cookies": [
+    {
+      "name": "__cf_bm",
+      "value": "cdirWSxSwOImHLEE5u2o4oJ0DaY6b2W3KFuB7Zibarg-1772728139-1.0.1.1-R2zl0OnRG20T5tS_qB.DrHSJJseQWmsG.PulxC4A9sg_B9PoHhhINyPF9Jn4J2JIgsQKI72you6NT4ixV.KZ.W2Tj5pj0Z5.qDiUApaPv7I",
+      "domain": ".hcaptcha.com",
+      "path": "/",
+      "expires": 1772729939.409859,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    }
+  ],
   "origins": [
     {
       "origin": "http://localhost:5173",
       "localStorage": [
         {
           "name": "last_active_c1c50226-f52b-4b74-9034-b1743efc25ad",
-          "value": "1772240674087"
+          "value": "1772728139769"
         },
         {
           "name": "chat-theme",
@@ -14,7 +25,7 @@
         },
         {
           "name": "sb-bzwmhtgctdvvesjrdsxt-auth-token",
-          "value": "{\"access_token\":\"eyJhbGciOiJIUzI1NiIsImtpZCI6InBUMjNNZ2VsNUlvOXN0emkiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2J6d21odGdjdGR2dmVzanJkc3h0LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJjMWM1MDIyNi1mNTJiLTRiNzQtOTAzNC1iMTc0M2VmYzI1YWQiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzcyMjQ0MjczLCJpYXQiOjE3NzIyNDA2NzMsImVtYWlsIjoiZTJlLXRlc3RAY2hhdGFwcC5kZXYiLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7ImF2YXRhcl91cmwiOiJodHRwczovL3VpLWF2YXRhcnMuY29tL2FwaS8_bmFtZT1FMkUrVXNlciIsImVtYWlsIjoiZTJlLXRlc3RAY2hhdGFwcC5kZXYiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZmlyc3RfbmFtZSI6IkUyRSIsImxhc3RfbmFtZSI6IlVzZXIiLCJwaG9uZV92ZXJpZmllZCI6ZmFsc2UsInN1YiI6ImMxYzUwMjI2LWY1MmItNGI3NC05MDM0LWIxNzQzZWZjMjVhZCIsInVzZXJuYW1lIjoiRTJFIn0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3NzIyNDA2NzN9XSwic2Vzc2lvbl9pZCI6IjI1MzMzYTEyLWMxZjEtNGNmOS1iNjBiLTBiMjZmODYyYjI5ZCIsImlzX2Fub255bW91cyI6ZmFsc2V9.PVPgBYfXwi7u9uwzpZH_YCL6uyZRe5f3OzGMXNyk9Gs\",\"token_type\":\"bearer\",\"expires_in\":3600,\"expires_at\":1772244273,\"refresh_token\":\"sv2johd42yzs\",\"user\":{\"id\":\"c1c50226-f52b-4b74-9034-b1743efc25ad\",\"aud\":\"authenticated\",\"role\":\"authenticated\",\"email\":\"e2e-test@chatapp.dev\",\"email_confirmed_at\":\"2026-02-27T23:29:24.583486Z\",\"phone\":\"\",\"confirmed_at\":\"2026-02-27T23:29:24.583486Z\",\"last_sign_in_at\":\"2026-02-28T01:04:33.943803021Z\",\"app_metadata\":{\"provider\":\"email\",\"providers\":[\"email\"]},\"user_metadata\":{\"avatar_url\":\"https://ui-avatars.com/api/?name=E2E+User\",\"email\":\"e2e-test@chatapp.dev\",\"email_verified\":true,\"first_name\":\"E2E\",\"last_name\":\"User\",\"phone_verified\":false,\"sub\":\"c1c50226-f52b-4b74-9034-b1743efc25ad\",\"username\":\"E2E\"},\"identities\":[{\"identity_id\":\"64775df0-c2d6-43ce-be7f-215124a16965\",\"id\":\"c1c50226-f52b-4b74-9034-b1743efc25ad\",\"user_id\":\"c1c50226-f52b-4b74-9034-b1743efc25ad\",\"identity_data\":{\"avatar_url\":\"https://ui-avatars.com/api/?name=E2E+User\",\"email\":\"e2e-test@chatapp.dev\",\"email_verified\":false,\"first_name\":\"E2E\",\"last_name\":\"User\",\"phone_verified\":false,\"sub\":\"c1c50226-f52b-4b74-9034-b1743efc25ad\",\"username\":\"E2E\"},\"provider\":\"email\",\"last_sign_in_at\":\"2026-02-27T23:29:24.571182Z\",\"created_at\":\"2026-02-27T23:29:24.571237Z\",\"updated_at\":\"2026-02-27T23:29:24.571237Z\",\"email\":\"e2e-test@chatapp.dev\"}],\"created_at\":\"2026-02-27T23:29:24.445357Z\",\"updated_at\":\"2026-02-28T01:04:33.946849Z\",\"is_anonymous\":false},\"weak_password\":null}"
+          "value": "{\"access_token\":\"eyJhbGciOiJIUzI1NiIsImtpZCI6InBUMjNNZ2VsNUlvOXN0emkiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2J6d21odGdjdGR2dmVzanJkc3h0LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJjMWM1MDIyNi1mNTJiLTRiNzQtOTAzNC1iMTc0M2VmYzI1YWQiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzcyNzMxNzM5LCJpYXQiOjE3NzI3MjgxMzksImVtYWlsIjoiZTJlLXRlc3RAY2hhdGFwcC5kZXYiLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7ImF2YXRhcl91cmwiOiJodHRwczovL3VpLWF2YXRhcnMuY29tL2FwaS8_bmFtZT1FMkUrVXNlciIsImVtYWlsIjoiZTJlLXRlc3RAY2hhdGFwcC5kZXYiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZmlyc3RfbmFtZSI6IkUyRSIsImxhc3RfbmFtZSI6IlVzZXIiLCJwaG9uZV92ZXJpZmllZCI6ZmFsc2UsInN1YiI6ImMxYzUwMjI2LWY1MmItNGI3NC05MDM0LWIxNzQzZWZjMjVhZCIsInVzZXJuYW1lIjoiRTJFIn0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3NzI3MjgxMzl9XSwic2Vzc2lvbl9pZCI6IjQ0ZGRkYmQ2LTE2MjYtNGFjNy05ZWU0LTY0YjRiOWZjNGZmNiIsImlzX2Fub255bW91cyI6ZmFsc2V9.dAmMAedEwLI_y7F-JTDK29gQj6sc33oA3fMSZOpvCUY\",\"token_type\":\"bearer\",\"expires_in\":3600,\"expires_at\":1772731739,\"refresh_token\":\"4z2icwcfqypj\",\"user\":{\"id\":\"c1c50226-f52b-4b74-9034-b1743efc25ad\",\"aud\":\"authenticated\",\"role\":\"authenticated\",\"email\":\"e2e-test@chatapp.dev\",\"email_confirmed_at\":\"2026-02-27T23:29:24.583486Z\",\"phone\":\"\",\"confirmed_at\":\"2026-02-27T23:29:24.583486Z\",\"last_sign_in_at\":\"2026-03-05T16:28:59.410125238Z\",\"app_metadata\":{\"provider\":\"email\",\"providers\":[\"email\"]},\"user_metadata\":{\"avatar_url\":\"https://ui-avatars.com/api/?name=E2E+User\",\"email\":\"e2e-test@chatapp.dev\",\"email_verified\":true,\"first_name\":\"E2E\",\"last_name\":\"User\",\"phone_verified\":false,\"sub\":\"c1c50226-f52b-4b74-9034-b1743efc25ad\",\"username\":\"E2E\"},\"identities\":[{\"identity_id\":\"64775df0-c2d6-43ce-be7f-215124a16965\",\"id\":\"c1c50226-f52b-4b74-9034-b1743efc25ad\",\"user_id\":\"c1c50226-f52b-4b74-9034-b1743efc25ad\",\"identity_data\":{\"avatar_url\":\"https://ui-avatars.com/api/?name=E2E+User\",\"email\":\"e2e-test@chatapp.dev\",\"email_verified\":false,\"first_name\":\"E2E\",\"last_name\":\"User\",\"phone_verified\":false,\"sub\":\"c1c50226-f52b-4b74-9034-b1743efc25ad\",\"username\":\"E2E\"},\"provider\":\"email\",\"last_sign_in_at\":\"2026-02-27T23:29:24.571182Z\",\"created_at\":\"2026-02-27T23:29:24.571237Z\",\"updated_at\":\"2026-02-27T23:29:24.571237Z\",\"email\":\"e2e-test@chatapp.dev\"}],\"created_at\":\"2026-02-27T23:29:24.445357Z\",\"updated_at\":\"2026-03-05T16:28:59.430895Z\",\"is_anonymous\":false},\"weak_password\":null}"
         }
       ]
     }
