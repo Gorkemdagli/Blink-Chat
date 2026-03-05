@@ -1,5 +1,5 @@
 # CI Workflow - Triggering run
-name: CI
+name: Optimization CI Test
 
 on:
   push:
