@@ -1,15 +1,21 @@
 {
-    "name": "chat-app-root",
+    "name": "blink-chat",
     "version": "1.0.0",
-    "description": "Root configuration for Chat App",
+    "description": "Root configuration for Blink-Chat",
     "scripts": {
-        "build": "docker-compose up --build",
-        "down": "docker-compose down",
+        "build": "docker-compose --env-file ./backend/.env up --build",
+        "down": "docker-compose down -v",
         "backend:dev": "npm --prefix backend run dev",
         "frontend:dev": "npm --prefix frontend run dev",
         "test:backend": "npm --prefix backend test",
         "test:frontend": "npm --prefix frontend test",
         "lint": "npm --prefix frontend run lint",
-        "test": "npm run test:backend && npm run test:frontend"
+        "test": "npm run test:backend && npm run test:frontend",
+        "e2e": "npm --prefix frontend run e2e",
+        "e2e:ui": "npm --prefix frontend run e2e:ui"
+    },
+    "dependencies": {
+        "@supabase/supabase-js": "^2.98.0",
+        "dotenv": "^17.3.1"
     }
 }
