@@ -11,15 +11,34 @@ services:
       - PORT=3000
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:3000/health" ]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    restart: unless-stopped
     networks:
       - chat-net
 
   redis:
-    image: redis:alpine
+    image: redis:7-alpine
+    env_file:
+      - ./backend/.env
+    command: /bin/sh -c 'redis-server --requirepass "$(echo $REDIS_PASSWORD | tr -d "\r")"'
     ports:
       - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping" ]
+      interval: 15s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+    restart: unless-stopped
     networks:
       - chat-net
 
@@ -29,16 +48,18 @@ services:
       dockerfile: Dockerfile
     ports:
       - "5173:80"
-    env_file:
-      - ./frontend/.env
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:80/" ]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+    restart: unless-stopped
     networks:
       - chat-net
-  # Optional: database service if not using remote Supabase entirely
-  # Since we use Supabase (Remote), we don't strictly need a db service, 
-  # but keeping the network structure clean.
-  # If we wanted to mock Supabase locally, we'd add it here.
 
 networks:
   chat-net:

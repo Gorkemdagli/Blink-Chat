@@ -1,5 +1,7 @@
-# Stage 1: Build
-FROM node:22-alpine as builder
+# ══════════════════════════════════════
+# STAGE 1: Builder
+# ══════════════════════════════════════
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -7,16 +9,19 @@ COPY package*.json ./
 RUN npm ci --legacy-peer-deps
 
 COPY . .
-RUN npm run build:prod
+RUN npm run build
 
-# Stage 2: Serve
-FROM nginx:alpine
+# ══════════════════════════════════════
+# STAGE 2: Runner
+# ══════════════════════════════════════
+FROM nginx:alpine AS runner
 
-# Copy build artifacts
 COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Expose port
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget -qO- http://localhost:80/ || exit 1
+
 EXPOSE 80
 
-# Start Nginx
 CMD ["nginx", "-g", "daemon off;"]

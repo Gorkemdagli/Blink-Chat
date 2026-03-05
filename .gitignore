@@ -59,6 +59,9 @@ jest-coverage/
 __coverage__/
 test-results/
 *.lcov
+playwright-report/
+blob-report/
+e2e/.auth/
 
 # Temporary files
 *.tmp
