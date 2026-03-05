@@ -354,10 +354,7 @@ export function useChatData(session: Session, state: ChatState) {
             if (initData.last_messages) {
                 initData.last_messages.forEach((msg: Message) => {
                     if (deletedMessageIds.has(msg.id)) return
-                    lastMessagesObj[msg.room_id] = {
-                        ...msg,
-                        user: userMap.get(msg.user_id)
-                    }
+                    lastMessagesObj[msg.room_id] = msg
                 })
             }
             setLastMessages(lastMessagesObj)
@@ -439,32 +436,7 @@ export function useChatData(session: Session, state: ChatState) {
             const deletedMessageIds = deletedMessageIdsRef.current
             const visibleMessages = messagesToShow.filter((msg: any) => !deletedMessageIds.has(msg.id))
 
-            const userIds = [...new Set(visibleMessages.map((m: any) => m.user_id))] as string[]
-
-            if (userIds.length === 0) {
-                setMessages([])
-                return
-            }
-
-            const uncachedUserIds = userIds.filter(id => !userCacheRef.current.has(id))
-
-            if (uncachedUserIds.length > 0) {
-                const { data: usersData } = await supabase
-                    .from('users')
-                    .select('id, username, email, user_code, avatar_url')
-                    .in('id', uncachedUserIds)
-
-                if (usersData) {
-                    cacheUsers(usersData)
-                }
-            }
-
-            const messagesWithUsers = visibleMessages.map((msg: any) => ({
-                ...msg,
-                user: userCacheRef.current.get(msg.user_id)
-            }))
-
-            const sortedMessages = messagesWithUsers.reverse()
+            const sortedMessages = visibleMessages.reverse()
             const uniqueMessages: Message[] = []
             const seenIds = new Set()
             for (const msg of sortedMessages) {
@@ -528,26 +500,7 @@ export function useChatData(session: Session, state: ChatState) {
             const deletedMessageIds = deletedMessageIdsRef.current
             const visibleMessages = messagesToShow.filter((msg: any) => !deletedMessageIds.has(msg.id))
 
-            const userIds = [...new Set(visibleMessages.map((m: any) => m.user_id))] as string[]
-            const uncachedUserIds = userIds.filter(id => !userCacheRef.current.has(id))
-
-            if (uncachedUserIds.length > 0) {
-                const { data: usersData } = await supabase
-                    .from('users')
-                    .select('id, username, email, user_code, avatar_url')
-                    .in('id', uncachedUserIds)
-
-                if (usersData) {
-                    cacheUsers(usersData)
-                }
-            }
-
-            const messagesWithUsers = visibleMessages.map((msg: any) => ({
-                ...msg,
-                user: userCacheRef.current.get(msg.user_id)
-            }))
-
-            const sortedNewMessages = messagesWithUsers.reverse()
+            const sortedNewMessages = visibleMessages.reverse()
             setMessages((prevMessages: Message[]) => {
                 const combined = [...sortedNewMessages, ...prevMessages]
                 const uniqueMessages: Message[] = []

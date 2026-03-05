@@ -2,6 +2,8 @@ import { useState, useRef } from 'react'
 import { X, Check, Search, Camera, Shield, UserMinus, UserPlus, Edit2 } from 'lucide-react'
 import { Room, User } from '../types'
 import { supabase } from '../supabaseClient'
+import ConfirmModal from './ConfirmModal'
+
 
 interface GroupInfoModalProps {
     room: Room
@@ -43,6 +45,8 @@ export default function GroupInfoModal({
 
     // Member action states
     const [isProcessing, setIsProcessing] = useState<string | null>(null) // the user id currently being processed
+    const [memberToRemove, setMemberToRemove] = useState<any | null>(null)
+
 
     if (!isOpen) return null
 
@@ -168,7 +172,6 @@ export default function GroupInfoModal({
 
     const handleRemoveMember = async (userId: string) => {
         if (!isOwner || userId === currentUserId) return
-        if (!confirm('Bu üyeyi gruptan çıkarmak istediğinize emin misiniz?')) return
 
         setIsProcessing(userId)
         await onRemoveMember(userId)
@@ -345,7 +348,7 @@ export default function GroupInfoModal({
 
                                             {isOwner && !isGroupOwner && (
                                                 <button
-                                                    onClick={() => handleRemoveMember(member.user_id)}
+                                                    onClick={() => setMemberToRemove(member)}
                                                     disabled={isProcessing === member.user_id}
                                                     className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
                                                     title="Gruptan Çıkar"
@@ -460,6 +463,21 @@ export default function GroupInfoModal({
                     </>
                 )}
             </div>
+
+            {/* Member Removal Confirmation */}
+            <ConfirmModal
+                isOpen={!!memberToRemove}
+                onClose={() => setMemberToRemove(null)}
+                onConfirm={() => {
+                    if (memberToRemove) {
+                        handleRemoveMember(memberToRemove.user_id)
+                    }
+                }}
+                title="Üyeyi Çıkar"
+                description={`${memberToRemove?.username} kişisini gruptan çıkarmak istediğinize emin misiniz?`}
+                confirmText="Gruptan Çıkar"
+                variant="danger"
+            />
         </div>
     )
 }

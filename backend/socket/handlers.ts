@@ -143,6 +143,17 @@ export function setupSocketHandlers(io: Server) {
             MessageController.handleMarkRead(io, socket, { ...data, userId });
         });
 
+        // ─── invitation_sent: Reali-time notification fallback ───
+        socket.on('invitation_sent', ({ inviteeId }: { inviteeId: string }) => {
+            if (!inviteeId) return;
+            // Alıcının tüm açık bağlantılarını (sid) bul ve uyar
+            for (const [sid, user] of activeUsers.entries()) {
+                if (user.id === inviteeId) {
+                    io.to(sid).emit('new_invitation');
+                }
+            }
+        });
+
         socket.on('disconnect', (reason: string) => {
             const user = activeUsers.get(socket.id);
             if (user) {
