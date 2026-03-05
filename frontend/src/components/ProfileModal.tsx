@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { X, Camera, Copy, Check, User, Save, Loader2, UserPlus, Clock, UserMinus } from 'lucide-react'
 import { User as UserType } from '../types'
 import { supabase } from '../supabaseClient'
+import ConfirmModal from './ConfirmModal'
+
 
 interface ProfileModalProps {
     user: UserType
@@ -35,6 +37,7 @@ export default function ProfileModal({
     const [copiedCode, setCopiedCode] = useState(false)
     const [error, setError] = useState('')
     const [successMessage, setSuccessMessage] = useState('')
+    const [showConfirmRemove, setShowConfirmRemove] = useState(false)
 
     // Fetch latest user data (bio) when modal opens
     useEffect(() => {
@@ -336,12 +339,7 @@ export default function ProfileModal({
                                 </div>
                                 {!isOwnProfile && isFriend && onRemoveFriend && (
                                     <button
-                                        onClick={() => {
-                                            if (confirm('Arkadaşlıktan çıkarmak istediğinize emin misiniz?')) {
-                                                onRemoveFriend(user.id);
-                                                onClose();
-                                            }
-                                        }}
+                                        onClick={() => setShowConfirmRemove(true)}
                                         className="p-2.5 text-red-500 hover:text-white hover:bg-red-500 bg-red-50 dark:bg-red-900/20 dark:hover:bg-red-500 rounded-xl transition-all"
                                         title="Arkadaşlıktan Çıkar"
                                     >
@@ -451,6 +449,22 @@ export default function ProfileModal({
                     )}
                 </div>
             </div>
+
+            {/* Friend Removal Confirmation */}
+            <ConfirmModal
+                isOpen={showConfirmRemove}
+                onClose={() => setShowConfirmRemove(false)}
+                onConfirm={() => {
+                    if (onRemoveFriend) {
+                        onRemoveFriend(user.id);
+                        onClose();
+                    }
+                }}
+                title="Arkadaşı Çıkar"
+                description={`${user.username} kişisini arkadaşlarınızdan çıkarmak istediğinize emin misiniz?`}
+                confirmText="Arkadaşlıktan Çıkar"
+                variant="danger"
+            />
         </div>
     )
 }

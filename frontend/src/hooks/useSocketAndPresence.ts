@@ -84,6 +84,7 @@ export function useSocketAndPresence(session: Session, state: ChatState, dataFun
         }
 
         socket.on('newMessage', handleUnifiedNewMessage)
+        socket.on('new_invitation', () => fetchPendingInvitations())
 
         // Okundu bilgisini de global dinliyoruz (tüm cihazlarda sync için veya sidebar için)
         socket.on('messages_read', ({ roomId }: { roomId: string }) => {
