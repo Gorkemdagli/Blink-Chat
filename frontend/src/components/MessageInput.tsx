@@ -79,10 +79,7 @@ export default function MessageInput({
                     onChange={(e) => {
                         setShowAttachMenu(false)
                         handleFileSelect(e)
-<<<<<<< HEAD
-=======
                         e.target.value = ''
->>>>>>> dev
                     }}
                 />
                 <input
@@ -93,10 +90,7 @@ export default function MessageInput({
                     onChange={(e) => {
                         setShowAttachMenu(false)
                         handleFileSelect(e)
-<<<<<<< HEAD
-=======
                         e.target.value = ''
->>>>>>> dev
                     }}
                 />
 
