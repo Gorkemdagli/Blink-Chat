@@ -131,10 +131,10 @@ export default function MessageInput({
                                     accept="image/*"
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                     title="Görsel Seç"
+                                    onClick={(e) => { e.currentTarget.value = '' }}
                                     onChange={(e) => {
                                         setShowAttachMenu(false)
                                         handleFileSelect(e)
-                                        e.target.value = ''
                                     }}
                                 />
                                 <ImageIcon size={16} className="text-purple-500 relative z-0" aria-hidden="true" />
@@ -143,13 +143,13 @@ export default function MessageInput({
                             <div className="relative flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md text-sm text-gray-700 dark:text-gray-200 transition-colors w-full text-left font-medium overflow-hidden">
                                 <input
                                     type="file"
-                                    accept="*/*"
+                                    accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,*/*"
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                     title="Dosya Seç"
+                                    onClick={(e) => { e.currentTarget.value = '' }}
                                     onChange={(e) => {
                                         setShowAttachMenu(false)
                                         handleFileSelect(e)
-                                        e.target.value = ''
                                     }}
                                 />
                                 <FileIcon size={16} className="text-blue-500 relative z-0" aria-hidden="true" />
