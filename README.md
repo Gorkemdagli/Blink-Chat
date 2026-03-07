@@ -139,6 +139,10 @@ SWAGGER_PASSWORD=admin_password
 # Supabase (supabase.com > Project Settings > API)
 VITE_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
+
+# hCaptcha (hcaptcha.com > Sites > Site Key)
+# Test/local için: 10000000-ffff-ffff-ffff-000000000001 (always-pass dummy key)
+VITE_HCAPTCHA_SITE_KEY=your-hcaptcha-site-key
 ```
 
 ### Veritabanı Kurulumu
@@ -211,12 +215,30 @@ npm run test:frontend
 cd backend && npm run test:coverage
 cd frontend && npm run test:coverage
 
-# E2E testleri (Playwright)
+# E2E testleri (Playwright) — tüm suite
 npm run e2e
+
+# Sadece unauthenticated testler (Supabase gerekmez)
+npm run e2e:headless
 
 # E2E testleri — görsel arayüz ile
 npm run e2e:ui
 ```
+
+#### E2E Testleri İçin Ön Koşullar
+
+Authenticated E2E testleri (`chat-messaging`, `chat-social`) çalıştırmak için:
+
+1. `backend/.env` dosyasında `SUPABASE_SERVICE_ROLE_KEY` tanımlı olmalıdır
+   - Supabase Dashboard → **Settings → API → service_role** key'ini kopyalayın
+   - Playwright bu key'i otomatik olarak okur (`playwright.config.ts` → `dotenv`)
+
+2. Test kullanıcısı Supabase'de mevcut olmalıdır:
+   - Email: `e2e-test@chatapp.dev` (veya `.env`'de `E2E_USER_EMAIL` set edin)
+   - Supabase Admin API aracılığıyla hCaptcha bypass edilir — ekstra adım gerekmez
+
+> **Not:** Sadece `npm run e2e:headless` çalıştırarak landing/login/register testlerini 
+> `SUPABASE_SERVICE_ROLE_KEY` olmadan da yapabilirsiniz.
 
 ---
 
