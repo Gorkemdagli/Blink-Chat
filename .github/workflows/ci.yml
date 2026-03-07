@@ -283,6 +283,7 @@ jobs:
           file: ./backend/Dockerfile
           push: false
           tags: chat-app-backend:${{ github.sha }}
+          load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -293,6 +294,7 @@ jobs:
           file: ./frontend/Dockerfile
           push: false
           tags: chat-app-frontend:${{ github.sha }}
+          load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
