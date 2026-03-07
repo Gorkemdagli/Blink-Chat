@@ -76,7 +76,7 @@ export default function MessageInput({
                 <input
                     type="file"
                     ref={fileInputRef}
-                    className="hidden"
+                    className="w-0 h-0 absolute opacity-0 overflow-hidden"
                     onChange={handleFileSelect}
                 />
 
