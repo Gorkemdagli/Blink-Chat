@@ -1,17 +1,24 @@
 import Redis from 'ioredis';
 import logger from './config/logger';
 
-const redisHost = process.env.REDIS_HOST || 'localhost';
+// Robust Host Extraction: Strips protocol part if user accidentally provided a URL
+let redisHost = process.env.REDIS_HOST || 'localhost';
+redisHost = redisHost.replace(/^https?:\/\/|^rediss?:\/\//, '').split(':')[0];
+
 const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
 const redisPassword = process.env.REDIS_PASSWORD?.trim() || undefined;
 
-// Upstash (genellikle 6379 veya 6380) TLS gerektirir. 
-// Render veya Upstash ortamında REDIS_TLS=true olarak ayarlanmalıdır.
-const isTLS = process.env.REDIS_TLS === 'true' || redisPort === 6380;
+// Upstash (usually 6379 or 6380) requires TLS. 
+// Render or Upstash should have REDIS_TLS=true
+let isTLS = process.env.REDIS_TLS === 'true' || redisPort === 6380;
+
+// Force TLS if the host ends with upstash.io for safety
+if (redisHost.endsWith('upstash.io')) isTLS = true;
 
 const redisOptions: any = {
     host: redisHost,
     port: redisPort,
+    username: 'default',
     password: redisPassword,
     retryStrategy: (times: number) => {
         if (times > 10) {

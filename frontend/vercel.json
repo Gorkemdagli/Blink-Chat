@@ -8,6 +8,7 @@
         }
     ],
     "env": {
-        "VITE_BACKEND_URL": "@vite_backend_url"
+        "VITE_API_URL": "Your Render app URL + /api",
+        "VITE_SOCKET_URL": "Your Render app URL"
     }
 }
