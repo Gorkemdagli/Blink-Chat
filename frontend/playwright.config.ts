@@ -1,4 +1,14 @@
 import { defineConfig, devices } from '@playwright/test';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Load backend env vars (SUPABASE_SERVICE_ROLE_KEY for auth.setup.ts)
+dotenv.config({ path: path.resolve(__dirname, '../backend/.env') });
+// Load frontend env vars (E2E_USER_EMAIL / E2E_USER_PASSWORD overrides)
+dotenv.config({ path: path.resolve(__dirname, '.env'), override: false });
 
 export default defineConfig({
     testDir: './e2e',
@@ -48,10 +58,16 @@ export default defineConfig({
 
     webServer: [
         {
-            command: 'npm run preview -- --port 5173',
+            command: process.env.CI
+                ? 'npm run preview -- --port 5173'
+                : 'npm run dev -- --port 5173',
             url: 'http://localhost:5173',
             reuseExistingServer: !process.env.CI,
             timeout: 180_000,
+            env: {
+                ...process.env,
+                VITE_HCAPTCHA_SITE_KEY: '10000000-ffff-ffff-ffff-000000000001',
+            },
         },
         {
             command: 'npm --prefix ../backend run start',

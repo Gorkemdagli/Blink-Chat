@@ -11,6 +11,14 @@ test.describe('Social — Friends Tab', () => {
     test.beforeEach(async ({ page }) => {
         await page.goto('/');
         await waitForAppReady(page);
+
+        // Auth guard
+        const isOnLanding = await page.locator(selectors.landing.startButton).first()
+            .isVisible({ timeout: 3_000 }).catch(() => false);
+        if (isOnLanding) {
+            test.skip(true, 'Not authenticated — auth setup was skipped');
+            return;
+        }
     });
 
     test('should switch to friends tab', async ({ page }) => {
@@ -58,6 +66,14 @@ test.describe('Social — Group Creation', () => {
     test.beforeEach(async ({ page }) => {
         await page.goto('/');
         await waitForAppReady(page);
+
+        // Auth guard
+        const isOnLanding = await page.locator(selectors.landing.startButton).first()
+            .isVisible({ timeout: 3_000 }).catch(() => false);
+        if (isOnLanding) {
+            test.skip(true, 'Not authenticated — auth setup was skipped');
+            return;
+        }
     });
 
     test('should open create group modal', async ({ page }) => {
