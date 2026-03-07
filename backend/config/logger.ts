@@ -1,5 +1,6 @@
 import winston from 'winston';
 import path from 'path';
+import 'winston-daily-rotate-file';
 
 // Log level from environment (default: 'info' in production, 'debug' in development)
 const logLevel = process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'warn' : 'debug');
@@ -19,14 +20,22 @@ const logger = winston.createLogger({
     ),
     defaultMeta: { service: 'chat-backend' },
     transports: [
-        // Write all logs with importance level of `error` or less to `error.log`
-        new winston.transports.File({
-            filename: path.join(__dirname, '../logs/error.log'),
+        // Daily rotation for error logs
+        new winston.transports.DailyRotateFile({
+            filename: path.join(__dirname, '../logs/error-%DATE%.log'),
+            datePattern: 'YYYY-MM-DD',
+            zippedArchive: true,
+            maxSize: '20m',
+            maxFiles: '14d',
             level: 'error'
         }),
-        // Write all logs with importance level of `info` or less to `combined.log`
-        new winston.transports.File({
-            filename: path.join(__dirname, '../logs/combined.log')
+        // Daily rotation for all logs (combined)
+        new winston.transports.DailyRotateFile({
+            filename: path.join(__dirname, '../logs/combined-%DATE%.log'),
+            datePattern: 'YYYY-MM-DD',
+            zippedArchive: true,
+            maxSize: '20m',
+            maxFiles: '14d'
         })
     ]
 }) as winston.Logger & { stream: { write: (message: string) => void } };
@@ -50,3 +59,4 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
 };
 
 export default logger;
+
