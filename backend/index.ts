@@ -42,6 +42,9 @@ app.use('/api-docs', basicAuth({
 // Health Check Endpoint
 app.use('/health', healthRoutes);
 
+import { createAdapter } from '@socket.io/redis-adapter';
+import redis from './redisClient';
+
 // HTTP Server
 const server = http.createServer(app);
 
@@ -56,8 +59,14 @@ const io = new Server(server, {
     pingInterval: 25000
 });
 
+// Redis Adapter Setup
+const pubClient = redis;
+const subClient = redis.duplicate();
+io.adapter(createAdapter(pubClient, subClient));
+
 // Setup Socket.IO event handlers
 setupSocketHandlers(io);
+
 
 // Initialize Cron Jobs (skip in test environment)
 if (process.env.NODE_ENV !== 'test') {

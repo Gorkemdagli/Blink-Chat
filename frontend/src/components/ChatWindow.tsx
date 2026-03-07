@@ -17,6 +17,8 @@ import ChatHeader from './ChatHeader'
 import MessageList from './MessageList'
 import MessageInput from './MessageInput'
 import GroupInfoModal from './GroupInfoModal'
+import ConfirmModal from './ConfirmModal'
+
 
 interface ChatWindowProps {
   selectedRoom: Room
@@ -97,6 +99,10 @@ export default function ChatWindow({
 
   // Group Info Modal State
   const [showGroupInfoModal, setShowGroupInfoModal] = useState(false)
+
+  // Confirmation States
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
+  const [showDeleteRoomConfirm, setShowDeleteRoomConfirm] = useState(false)
 
   const handleUserClick = (user: User) => {
     setSelectedUserProfile(user)
@@ -634,9 +640,9 @@ export default function ChatWindow({
         onInviteClick={onInviteClick}
         showMenu={showMenu}
         setShowMenu={setShowMenu}
-        onLeaveGroup={onLeaveGroup}
+        onLeaveGroup={() => setShowLeaveConfirm(true)}
         onGroupClick={selectedRoom.type === 'private' ? () => setShowGroupInfoModal(true) : undefined}
-        onDeleteChat={onDeleteRoom ? () => onDeleteRoom(selectedRoom.id) : undefined}
+        onDeleteChat={onDeleteRoom ? () => setShowDeleteRoomConfirm(true) : undefined}
         onRemoveFriend={onRemoveFriend && selectedRoom.otherUser ? () => onRemoveFriend(selectedRoom.otherUser!.id) : undefined}
       />
 
@@ -683,40 +689,42 @@ export default function ChatWindow({
         isMobile={isMobile}
       />
 
-      {/* Modals */}
-      {deleteConfirmMessageId && (
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[200] animate-in fade-in duration-200"
-          onClick={handleCancelConfirmDelete}
-        >
-          <div
-            className="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 max-w-sm w-full mx-4 shadow-2xl border border-gray-100 dark:border-slate-800 scale-in-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-red-50 dark:bg-red-900/20 rounded-2xl flex items-center justify-center mb-4">
-                <X size={32} className="text-red-500" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Mesajı Sil</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 font-medium">Bu mesajı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
-              <div className="flex gap-3 w-full">
-                <button
-                  onClick={handleCancelConfirmDelete}
-                  className="flex-1 py-3 bg-gray-100 dark:bg-slate-800 text-slate-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-slate-700 transition-all text-sm"
-                >
-                  Vazgeç
-                </button>
-                <button
-                  onClick={handleConfirmDelete}
-                  className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-all shadow-lg shadow-red-100 dark:shadow-none text-sm"
-                >
-                  Evet, Sil
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Confirmation Modals */}
+      <ConfirmModal
+        isOpen={!!deleteConfirmMessageId}
+        onClose={handleCancelConfirmDelete}
+        onConfirm={handleConfirmDelete}
+        title="Mesajı Sil"
+        description="Bu mesajı silmek istediğinize emin misiniz? Bu işlem geri alınamaz."
+        confirmText="Evet, Sil"
+        variant="danger"
+      />
+
+      <ConfirmModal
+        isOpen={showLeaveConfirm}
+        onClose={() => setShowLeaveConfirm(false)}
+        onConfirm={() => {
+          if (onLeaveGroup) onLeaveGroup()
+          setShowLeaveConfirm(false)
+        }}
+        title="Gruptan Ayrıl"
+        description="Bu gruptan ayrılmak istediğinize emin misiniz?"
+        confirmText="Gruptan Ayrıl"
+        variant="danger"
+      />
+
+      <ConfirmModal
+        isOpen={showDeleteRoomConfirm}
+        onClose={() => setShowDeleteRoomConfirm(false)}
+        onConfirm={() => {
+          if (onDeleteRoom) onDeleteRoom(selectedRoom.id)
+          setShowDeleteRoomConfirm(false)
+        }}
+        title="Sohbeti Sil"
+        description="Bu sohbeti listenizden kaldırmak istediğinize emin misiniz?"
+        confirmText="Sohbeti Sil"
+        variant="danger"
+      />
 
       {/* Lightbox */}
       {previewImage && (
@@ -834,14 +842,25 @@ export default function ChatWindow({
           }}
           onInviteMembers={async (userIds) => {
             try {
-              const inserts = userIds.map(id => ({
-                room_id: selectedRoom.id,
-                inviter_id: session.user.id,
-                invitee_id: id,
-                status: 'pending'
-              }))
-              const { error } = await supabase.from('room_invitations').insert(inserts)
-              if (error) throw error
+              // RPC'yi her kullanıcı için ayrı ayrı çağırıyoruz (RPC tekil davet için tasarlandı)
+              const socket = getSocket(session.access_token)
+              const results = await Promise.all(
+                userIds.map(async id => {
+                  const res = await supabase.rpc('invite_to_room', {
+                    p_room_id: selectedRoom.id,
+                    p_invitee_id: id
+                  })
+                  if (!res.error) {
+                    socket.emit('invitation_sent', { inviteeId: id })
+                  }
+                  return res
+                })
+              )
+
+              // Hata kontrolü
+              const firstError = results.find(r => r.error)?.error
+              if (firstError) throw firstError
+
               return true
             } catch (err) {
               console.error('Error inviting members:', err)

@@ -3,10 +3,11 @@
     "version": "1.0.0",
     "description": "Root configuration for Blink-Chat",
     "scripts": {
-        "build": "docker-compose --env-file ./backend/.env up --build",
-        "down": "docker-compose down -v",
+        "dev": "echo 'Tip: Use \"npm run backend:dev\" or \"npm run frontend:dev\" to start individual services.'",
         "backend:dev": "npm --prefix backend run dev",
         "frontend:dev": "npm --prefix frontend run dev",
+        "build": "docker-compose --env-file ./backend/.env up --build",
+        "down": "docker-compose down -v",
         "test:backend": "npm --prefix backend test",
         "test:frontend": "npm --prefix frontend test",
         "lint": "npm --prefix frontend run lint",

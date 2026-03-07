@@ -4,15 +4,7 @@ import redis from '../redisClient';
 import logger from '../config/logger';
 import { MessageController } from '../controllers/messageController';
 
-interface AuthenticatedUser {
-    id: string;
-    email?: string;
-    connectedAt: Date;
-    rooms: Set<string>;
-}
-
-// Aktif kullanıcıları takip et
-const activeUsers = new Map<string, AuthenticatedUser>();
+// in-memory map yerine, ölçeklenebilirlik için Redis + Socket.io rooms (user:userId) kullanıyoruz
 
 // Socket rate limiter (mesaj başına 500ms cooldown)
 const lastMessageTime = new Map<string, number>();
@@ -74,11 +66,19 @@ export function setupSocketHandlers(io: Server) {
 
         logger.info(`User connected: ${socket.id} (uid: ${userId}, name: ${username}) | Total: ${io.engine.clientsCount}`);
 
-        activeUsers.set(socket.id, {
-            id: userId,
-            email: socket.data.email,
-            connectedAt: new Date(),
-            rooms: new Set()
+        // Her kullanıcıyı kendi ID'sine özel bir odaya ekle (Cross-instance bildirimler için)
+        socket.join(`user:${userId}`);
+
+        // Redis'te online durumunu merkezi olarak tut (EX 60 ile otomatik düşme)
+        redis.set(`user:status:${userId}`, 'online', 'EX', 60).catch(err => {
+            logger.error(`Redis presence set error:`, err);
+        });
+
+        // İstemci heartbeat gönderdikçe süreyi uzatması için
+        socket.on('heartbeat', () => {
+            redis.set(`user:status:${userId}`, 'online', 'EX', 60).catch(err => {
+                logger.error(`Redis presence heartbeat error:`, err);
+            });
         });
 
         // ─── joinRoom: Üyelik kontrolü ───
@@ -100,8 +100,6 @@ export function setupSocketHandlers(io: Server) {
                 }
 
                 socket.join(roomId);
-                const user = activeUsers.get(socket.id);
-                if (user) user.rooms.add(roomId);
             } catch (err) {
                 logger.error('joinRoom error:', err);
             }
@@ -109,8 +107,6 @@ export function setupSocketHandlers(io: Server) {
 
         socket.on('leaveRoom', (roomId: string) => {
             socket.leave(roomId);
-            const user = activeUsers.get(socket.id);
-            if (user) user.rooms.delete(roomId);
         });
 
         // ─── sendMessage: Rate limit + userId override ───
@@ -143,13 +139,27 @@ export function setupSocketHandlers(io: Server) {
             MessageController.handleMarkRead(io, socket, { ...data, userId });
         });
 
-        socket.on('disconnect', (reason: string) => {
-            const user = activeUsers.get(socket.id);
-            if (user) {
-                logger.info(`User disconnected: ${socket.id} (uid: ${userId}) | Reason: ${reason} | Total: ${io.engine.clientsCount}`);
-                activeUsers.delete(socket.id);
-            }
+        // ─── invitation_sent: Reali-time notification fallback ───
+        socket.on('invitation_sent', ({ inviteeId }: { inviteeId: string }) => {
+            if (!inviteeId) return;
+            // Redis Adapter ile tüm sunuculardaki hedefe iletilir
+            io.to(`user:${inviteeId}`).emit('new_invitation');
+        });
+
+        socket.on('disconnect', async (reason: string) => {
+            logger.info(`User disconnected: ${socket.id} (uid: ${userId}) | Reason: ${reason} | Total: ${io.engine.clientsCount}`);
             lastMessageTime.delete(socket.id);
+
+            try {
+                // Adapter üzerinden tüm sunuculardaki user odasını kontrol et
+                const sockets = await io.in(`user:${userId}`).fetchSockets();
+                if (sockets.length === 0) {
+                    // Kullanıcının hiçbir sekmesi/bağlantısı kalmadıysa offline yap
+                    await redis.del(`user:status:${userId}`);
+                }
+            } catch (err) {
+                logger.error(`Redis presence del error:`, err);
+            }
         });
     });
 }

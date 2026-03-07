@@ -10,6 +10,7 @@ import {
 import { Room, User, UnreadCounts, Message } from '../types'
 import { Session } from '@supabase/supabase-js'
 import ProfileModal from './ProfileModal'
+import ConfirmModal from './ConfirmModal'
 
 interface SidebarProps {
   rooms: Room[]
@@ -58,6 +59,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const [activeTab, setActiveTab] = useState('Odalar')
   const [showProfileModal, setShowProfileModal] = useState(false)
+  const [friendToRemove, setFriendToRemove] = useState<User | null>(null)
 
   const totalNotifications = pendingInvitationsCount + friendRequestsCount
 
@@ -303,9 +305,7 @@ export default function Sidebar({
                         <div
                           onClick={(e) => {
                             e.stopPropagation()
-                            if (confirm('Arkadaşlıktan çıkarmak istediğinize emin misiniz?')) {
-                              onRemoveFriend(user.id)
-                            }
+                            setFriendToRemove(user)
                           }}
                           className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity text-red-500 hover:text-red-700 p-1.5 cursor-pointer rounded z-10"
                           title="Arkadaşlıktan çıkar"
@@ -316,9 +316,7 @@ export default function Sidebar({
                             if (e.key === 'Enter' || e.key === ' ') {
                               e.preventDefault()
                               e.stopPropagation()
-                              if (confirm('Arkadaşlıktan çıkarmak istediğinize emin misiniz?')) {
-                                onRemoveFriend(user.id)
-                              }
+                              setFriendToRemove(user)
                             }
                           }}
                         >
@@ -380,6 +378,21 @@ export default function Sidebar({
           isOwnProfile={true}
         />
       )}
+
+      {/* Friend Removal Confirmation */}
+      <ConfirmModal
+        isOpen={!!friendToRemove}
+        onClose={() => setFriendToRemove(null)}
+        onConfirm={() => {
+          if (friendToRemove && onRemoveFriend) {
+            onRemoveFriend(friendToRemove.id)
+          }
+        }}
+        title="Arkadaşı Çıkar"
+        description={`${friendToRemove?.username} kişisini arkadaşlarınızdan çıkarmak istediğinize emin misiniz?`}
+        confirmText="Arkadaşlıktan Çıkar"
+        variant="danger"
+      />
     </aside>
   )
 }
