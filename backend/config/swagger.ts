@@ -27,7 +27,10 @@ const options: swaggerJsdoc.Options = {
             },
         },
     },
-    apis: ['./index.ts', './routes/*.ts'], // Files containing annotations
+    apis: [
+        './index.ts', './routes/*.ts',       // Local Development (TS)
+        './dist/index.js', './dist/routes/*.js' // Production Docker (JS)
+    ],
 };
 
 const specs = swaggerJsdoc(options);

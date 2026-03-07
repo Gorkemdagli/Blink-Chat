@@ -1,0 +1,56 @@
+
+> backend@1.0.0 test
+> jest --runInBand
+
+ts-jest[config] (WARN) 
+    The "ts-jest" config option "isolatedModules" is deprecated and will be removed in v30.0.0. Please use "isolatedModules: true" in C:/Users/Gorkem/Desktop/chat app/backend/tsconfig.json instead, see https://www.typescriptlang.org/tsconfig/#isolatedModules
+  
+PASS tests/unit/socketValidators.test.ts
+PASS tests/unit/messageController.test.ts
+PASS tests/unit/cronJobs.test.ts
+PASS tests/unit/messageService.test.ts
+FAIL tests/security.test.ts
+  ÔùÅ Test suite failed to run
+
+    TypeError: this.subClient.psubscribe is not a function
+
+      63 | const pubClient = redis;
+      64 | const subClient = redis.duplicate();
+    > 65 | io.adapter(createAdapter(pubClient, subClient));
+         |    ^
+      66 |
+      67 | // Setup Socket.IO event handlers
+      68 | setupSocketHandlers(io);
+
+      at new RedisAdapter (node_modules/@socket.io/redis-adapter/dist/index.js:99:28)
+      at new <anonymous> (node_modules/@socket.io/redis-adapter/dist/index.js:49:16)
+      at Namespace._initAdapter (node_modules/socket.io/dist/namespace.js:99:24)
+      at Server.adapter (node_modules/socket.io/dist/index.js:188:17)
+      at Object.<anonymous> (index.ts:65:4)
+      at Object.<anonymous> (tests/security.test.ts:4:1)
+
+FAIL tests/performance.test.ts
+  ÔùÅ Test suite failed to run
+
+    TypeError: this.subClient.psubscribe is not a function
+
+      63 | const pubClient = redis;
+      64 | const subClient = redis.duplicate();
+    > 65 | io.adapter(createAdapter(pubClient, subClient));
+         |    ^
+      66 |
+      67 | // Setup Socket.IO event handlers
+      68 | setupSocketHandlers(io);
+
+      at new RedisAdapter (node_modules/@socket.io/redis-adapter/dist/index.js:99:28)
+      at new <anonymous> (node_modules/@socket.io/redis-adapter/dist/index.js:49:16)
+      at Namespace._initAdapter (node_modules/socket.io/dist/namespace.js:99:24)
+      at Server.adapter (node_modules/socket.io/dist/index.js:188:17)
+      at Object.<anonymous> (index.ts:65:4)
+      at Object.<anonymous> (tests/performance.test.ts:2:1)
+
+Test Suites: 2 failed, 4 passed, 6 total
+Tests:       35 passed, 35 total
+Snapshots:   0 total
+Time:        1.922 s
+Ran all test suites.
