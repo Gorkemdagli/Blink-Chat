@@ -62,6 +62,7 @@ const io = new Server(server, {
 // Redis Adapter Setup
 const pubClient = redis;
 const subClient = redis.duplicate();
+subClient.on('error', (err) => logger.error('❌ Redis SubClient hatası:', err));
 io.adapter(createAdapter(pubClient, subClient));
 
 // Setup Socket.IO event handlers

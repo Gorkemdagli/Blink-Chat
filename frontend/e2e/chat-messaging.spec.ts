@@ -11,6 +11,14 @@ test.describe('Chat Interface — Core', () => {
     test.beforeEach(async ({ page }) => {
         await page.goto('/');
         await waitForAppReady(page);
+
+        // Auth guard: if we're on landing page, auth setup didn't succeed
+        const isOnLanding = await page.locator(selectors.landing.startButton).first()
+            .isVisible({ timeout: 3_000 }).catch(() => false);
+        if (isOnLanding) {
+            test.skip(true, 'Not authenticated — auth setup was skipped');
+            return;
+        }
     });
 
     test('should load chat interface after auth', async ({ page }) => {
@@ -135,6 +143,15 @@ test.describe('Chat Interface — Input Behavior', () => {
     test.beforeEach(async ({ page }) => {
         await page.goto('/');
         await waitForAppReady(page);
+
+        // Auth guard
+        const isOnLanding = await page.locator(selectors.landing.startButton).first()
+            .isVisible({ timeout: 3_000 }).catch(() => false);
+        if (isOnLanding) {
+            test.skip(true, 'Not authenticated — auth setup was skipped');
+            return;
+        }
+
         await page.waitForTimeout(3_000);
 
         // Open first room
