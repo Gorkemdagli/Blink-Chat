@@ -211,26 +211,26 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: |
-            frontend/package-lock.json
-            backend/package-lock.json
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install Frontend
         run: npm ci --legacy-peer-deps
 
-      - name: Install Backend
-        working-directory: ./backend
-        run: npm ci
+      - name: Build Frontend
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: placeholder-key-for-ci
+          VITE_HCAPTCHA_SITE_KEY: 10000000-ffff-ffff-ffff-000000000001
+          
+      - name: Install & Build Backend
+        run: |
+          cd ../backend
+          npm ci
+          npm run build
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
-
-      - name: Build Frontend
-        run: npm run build
-
-      - name: Build Backend
-        working-directory: ./backend
-        run: npm run build
 
       - name: Run E2E Tests (Unauthenticated)
         run: npx playwright test --project=unauthenticated
@@ -239,11 +239,13 @@ jobs:
           VITE_SUPABASE_URL: https://placeholder.supabase.co
           VITE_SUPABASE_ANON_KEY: placeholder-key-for-ci
           VITE_HCAPTCHA_SITE_KEY: 10000000-ffff-ffff-ffff-000000000001
-          # Backend Env (Needed because webServer starts the backend)
           SUPABASE_URL: https://placeholder.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: placeholder-key-for-ci
-          REDIS_HOST: localhost
-          NODE_ENV: production
+          JWT_SECRET: placeholder-jwt-secret-for-ci
+          SESSION_SECRET: placeholder-session-secret-for-ci
+          REDIS_PASSWORD: ci-test-password
+          SWAGGER_USER: admin
+          SWAGGER_PASSWORD: admin
 
       - name: Upload Playwright Report
         if: always()
