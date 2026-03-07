@@ -1,7 +1,6 @@
 import { Paperclip, Smile, Send, Image as ImageIcon, File as FileIcon, X } from 'lucide-react'
 import Picker from '@emoji-mart/react'
 import data from '@emoji-mart/data'
-import { MutableRefObject } from 'react'
 
 interface MessageInputProps {
     inputValue: string
@@ -16,10 +15,10 @@ interface MessageInputProps {
     showEmojiPicker: boolean
     toggleEmojiPicker: () => void
     handleEmojiSelect: (emoji: any) => void
-    fileInputRef: MutableRefObject<HTMLInputElement | null>
+
     handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void
-    emojiPickerRef: MutableRefObject<HTMLDivElement | null>
-    attachMenuRef: MutableRefObject<HTMLDivElement | null>
+    emojiPickerRef: React.RefObject<HTMLDivElement | null>
+    attachMenuRef: React.RefObject<HTMLDivElement | null>
     isMobile: boolean
 }
 
@@ -36,7 +35,6 @@ export default function MessageInput({
     showEmojiPicker,
     toggleEmojiPicker,
     handleEmojiSelect,
-    fileInputRef,
     handleFileSelect,
     emojiPickerRef,
     attachMenuRef,
@@ -75,9 +73,25 @@ export default function MessageInput({
 
                 <input
                     type="file"
-                    ref={fileInputRef}
+                    id="image-upload-input"
+                    accept="image/*"
                     className="w-0 h-0 absolute opacity-0 overflow-hidden"
-                    onChange={handleFileSelect}
+                    onChange={(e) => {
+                        setShowAttachMenu(false)
+                        handleFileSelect(e)
+                        e.target.value = ''
+                    }}
+                />
+                <input
+                    type="file"
+                    id="file-upload-input"
+                    accept="*/*"
+                    className="w-0 h-0 absolute opacity-0 overflow-hidden"
+                    onChange={(e) => {
+                        setShowAttachMenu(false)
+                        handleFileSelect(e)
+                        e.target.value = ''
+                    }}
                 />
 
                 {/* Selected File Preview */}
@@ -132,34 +146,22 @@ export default function MessageInput({
                             aria-label="Dosya Ekleme Seçenekleri"
                             className="absolute bottom-full right-2 md:right-6 mb-2 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-100 dark:border-slate-700 p-2 flex flex-col gap-1 min-w-[140px] z-50 animate-in fade-in slide-in-from-bottom-2"
                         >
-                            <button
+                            <label
+                                htmlFor="image-upload-input"
                                 role="menuitem"
-                                onClick={() => {
-                                    setShowAttachMenu(false)
-                                    if (fileInputRef.current) {
-                                        fileInputRef.current.accept = "image/*"
-                                        fileInputRef.current.click()
-                                    }
-                                }}
-                                className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md text-sm text-gray-700 dark:text-gray-200 transition-colors w-full text-left font-medium focus:outline-none focus:bg-gray-100 dark:focus:bg-slate-600"
+                                className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md text-sm text-gray-700 dark:text-gray-200 transition-colors w-full text-left font-medium focus-within:bg-gray-100 dark:focus-within:bg-slate-600 cursor-pointer outline-none"
                             >
                                 <ImageIcon size={16} className="text-purple-500" aria-hidden="true" />
                                 <span>Görsel Gönder</span>
-                            </button>
-                            <button
+                            </label>
+                            <label
+                                htmlFor="file-upload-input"
                                 role="menuitem"
-                                onClick={() => {
-                                    setShowAttachMenu(false)
-                                    if (fileInputRef.current) {
-                                        fileInputRef.current.accept = "*/*"
-                                        fileInputRef.current.click()
-                                    }
-                                }}
-                                className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md text-sm text-gray-700 dark:text-gray-200 transition-colors w-full text-left font-medium focus:outline-none focus:bg-gray-100 dark:focus:bg-slate-600"
+                                className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md text-sm text-gray-700 dark:text-gray-200 transition-colors w-full text-left font-medium focus-within:bg-gray-100 dark:focus-within:bg-slate-600 cursor-pointer outline-none"
                             >
                                 <FileIcon size={16} className="text-blue-500" aria-hidden="true" />
                                 <span>Dosya Gönder</span>
-                            </button>
+                            </label>
                         </div>
                     )}
 
