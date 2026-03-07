@@ -225,6 +225,13 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
 
+      - name: Build Frontend
+        run: npm run build
+
+      - name: Build Backend
+        working-directory: ./backend
+        run: npm run build
+
       - name: Run E2E Tests (Unauthenticated)
         run: npx playwright test --project=unauthenticated
         env:
