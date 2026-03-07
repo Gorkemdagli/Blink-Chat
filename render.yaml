@@ -5,7 +5,7 @@ services:
     plan: free # Veya ihtiyaca göre 'starter'
     region: frankfurt # Türkiye'ye en yakın stabil bölge
     dockerContext: backend
-    dockerfilePath: Dockerfile # Relatif to context
+    dockerfilePath: backend/Dockerfile # Relative to repository root
     envVars:
       - key: NODE_ENV
         value: production
