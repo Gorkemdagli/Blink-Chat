@@ -83,7 +83,6 @@ export default function ChatWindow({
   const emojiPickerRef = useRef<HTMLDivElement>(null)
   const attachMenuRef = useRef<HTMLDivElement>(null)
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [showAttachMenu, setShowAttachMenu] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -447,8 +446,6 @@ export default function ChatWindow({
 
     setSelectedFile(file)
     setShowAttachMenu(false)
-    // Focus back to input
-    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -682,7 +679,6 @@ export default function ChatWindow({
         showEmojiPicker={showEmojiPicker}
         toggleEmojiPicker={toggleEmojiPicker}
         handleEmojiSelect={handleEmojiSelect}
-        fileInputRef={fileInputRef}
         handleFileSelect={handleFileSelect}
         emojiPickerRef={emojiPickerRef}
         attachMenuRef={attachMenuRef}

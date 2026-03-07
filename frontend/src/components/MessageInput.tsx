@@ -1,7 +1,6 @@
 import { Paperclip, Smile, Send, Image as ImageIcon, File as FileIcon, X } from 'lucide-react'
 import Picker from '@emoji-mart/react'
 import data from '@emoji-mart/data'
-import { MutableRefObject } from 'react'
 
 interface MessageInputProps {
     inputValue: string
@@ -16,10 +15,10 @@ interface MessageInputProps {
     showEmojiPicker: boolean
     toggleEmojiPicker: () => void
     handleEmojiSelect: (emoji: any) => void
-    fileInputRef?: MutableRefObject<HTMLInputElement | null>
+
     handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void
-    emojiPickerRef: MutableRefObject<HTMLDivElement | null>
-    attachMenuRef: MutableRefObject<HTMLDivElement | null>
+    emojiPickerRef: React.RefObject<HTMLDivElement | null>
+    attachMenuRef: React.RefObject<HTMLDivElement | null>
     isMobile: boolean
 }
 
@@ -36,7 +35,6 @@ export default function MessageInput({
     showEmojiPicker,
     toggleEmojiPicker,
     handleEmojiSelect,
-    fileInputRef,
     handleFileSelect,
     emojiPickerRef,
     attachMenuRef,
@@ -81,6 +79,10 @@ export default function MessageInput({
                     onChange={(e) => {
                         setShowAttachMenu(false)
                         handleFileSelect(e)
+<<<<<<< HEAD
+=======
+                        e.target.value = ''
+>>>>>>> dev
                     }}
                 />
                 <input
@@ -91,6 +93,10 @@ export default function MessageInput({
                     onChange={(e) => {
                         setShowAttachMenu(false)
                         handleFileSelect(e)
+<<<<<<< HEAD
+=======
+                        e.target.value = ''
+>>>>>>> dev
                     }}
                 />
 
