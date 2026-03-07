@@ -4,7 +4,8 @@ services:
     env: docker
     plan: free # Veya ihtiyaca göre 'starter'
     region: frankfurt # Türkiye'ye en yakın stabil bölge
-    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    dockerfilePath: Dockerfile # Relatif to context
     envVars:
       - key: NODE_ENV
         value: production
@@ -25,7 +26,7 @@ services:
       - key: REDIS_TLS
         value: "true"
       - key: SWAGGER_USER
-        value: admin
+        sync: false # Örneğin: Gorkem
       - key: SWAGGER_PASSWORD
         sync: false
       - key: DATABASE_URL
