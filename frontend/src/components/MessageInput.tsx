@@ -71,28 +71,7 @@ export default function MessageInput({
 
             <div className="w-full max-w-full flex items-center gap-2 md:gap-3 bg-gray-50 dark:bg-slate-800/50 rounded-xl px-3 md:px-4 py-1.5 border border-gray-200 dark:border-slate-700 focus-within:border-sky-300 dark:focus-within:border-sky-700 focus-within:ring-2 focus-within:ring-sky-100 dark:focus-within:ring-sky-900/30 transition-all">
 
-                <input
-                    type="file"
-                    id="image-upload-input"
-                    accept="image/*"
-                    className="w-0 h-0 absolute opacity-0 overflow-hidden"
-                    onChange={(e) => {
-                        setShowAttachMenu(false)
-                        handleFileSelect(e)
-                        e.target.value = ''
-                    }}
-                />
-                <input
-                    type="file"
-                    id="file-upload-input"
-                    accept="*/*"
-                    className="w-0 h-0 absolute opacity-0 overflow-hidden"
-                    onChange={(e) => {
-                        setShowAttachMenu(false)
-                        handleFileSelect(e)
-                        e.target.value = ''
-                    }}
-                />
+
 
                 {/* Selected File Preview */}
                 {selectedFile && (
@@ -146,22 +125,36 @@ export default function MessageInput({
                             aria-label="Dosya Ekleme Seçenekleri"
                             className="absolute bottom-full right-2 md:right-6 mb-2 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-100 dark:border-slate-700 p-2 flex flex-col gap-1 min-w-[140px] z-50 animate-in fade-in slide-in-from-bottom-2"
                         >
-                            <label
-                                htmlFor="image-upload-input"
-                                role="menuitem"
-                                className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md text-sm text-gray-700 dark:text-gray-200 transition-colors w-full text-left font-medium focus-within:bg-gray-100 dark:focus-within:bg-slate-600 cursor-pointer outline-none"
-                            >
-                                <ImageIcon size={16} className="text-purple-500" aria-hidden="true" />
-                                <span>Görsel Gönder</span>
-                            </label>
-                            <label
-                                htmlFor="file-upload-input"
-                                role="menuitem"
-                                className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md text-sm text-gray-700 dark:text-gray-200 transition-colors w-full text-left font-medium focus-within:bg-gray-100 dark:focus-within:bg-slate-600 cursor-pointer outline-none"
-                            >
-                                <FileIcon size={16} className="text-blue-500" aria-hidden="true" />
-                                <span>Dosya Gönder</span>
-                            </label>
+                            <div className="relative flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md text-sm text-gray-700 dark:text-gray-200 transition-colors w-full text-left font-medium overflow-hidden">
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                    title="Görsel Seç"
+                                    onChange={(e) => {
+                                        setShowAttachMenu(false)
+                                        handleFileSelect(e)
+                                        e.target.value = ''
+                                    }}
+                                />
+                                <ImageIcon size={16} className="text-purple-500 relative z-0" aria-hidden="true" />
+                                <span className="relative z-0">Görsel Gönder</span>
+                            </div>
+                            <div className="relative flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md text-sm text-gray-700 dark:text-gray-200 transition-colors w-full text-left font-medium overflow-hidden">
+                                <input
+                                    type="file"
+                                    accept="*/*"
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                    title="Dosya Seç"
+                                    onChange={(e) => {
+                                        setShowAttachMenu(false)
+                                        handleFileSelect(e)
+                                        e.target.value = ''
+                                    }}
+                                />
+                                <FileIcon size={16} className="text-blue-500 relative z-0" aria-hidden="true" />
+                                <span className="relative z-0">Dosya Gönder</span>
+                            </div>
                         </div>
                     )}
 
