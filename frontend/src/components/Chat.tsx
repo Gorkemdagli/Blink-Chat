@@ -1,7 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+
 import { Session } from '@supabase/supabase-js'
 import { useChatState, useChatData, useChatActions, useSocketAndPresence } from '../hooks'
 import Toast from './Toast'
+import ConfirmModal from './ConfirmModal'
+
 import InviteModal from './InviteModal'
 import NotificationsPanel from './NotificationsPanel'
 import EmptyState from './EmptyState'
@@ -49,6 +52,8 @@ export default function Chat({ session, darkMode, onToggleDarkMode }: ChatProps)
         currentUser, userPresence,
         hideToast, showToast
     } = state
+
+    const [roomToDelete, setRoomToDelete] = useState<string | null>(null)
 
     // Destructure data functions
     const {
@@ -128,9 +133,7 @@ export default function Chat({ session, darkMode, onToggleDarkMode }: ChatProps)
                             setShowInvitationsPanel(!showInvitationsPanel)
                         }}
                         onDeleteRoom={(roomId: string) => {
-                            if (confirm('Bu odayı silmek istediğinize emin misiniz? (Sadece sizin görünümünüzden silinecek)')) {
-                                deleteRoom(roomId, { stopPropagation: () => { } } as unknown as React.MouseEvent)
-                            }
+                            setRoomToDelete(roomId)
                         }}
                         currentUser={currentUser}
                         onLogout={handleLogout}
@@ -227,6 +230,21 @@ export default function Chat({ session, darkMode, onToggleDarkMode }: ChatProps)
                     />
                 )}
             </div>
+
+            {/* Room Deletion Confirmation */}
+            <ConfirmModal
+                isOpen={!!roomToDelete}
+                onClose={() => setRoomToDelete(null)}
+                onConfirm={() => {
+                    if (roomToDelete) {
+                        deleteRoom(roomToDelete, { stopPropagation: () => { } } as unknown as React.MouseEvent)
+                    }
+                }}
+                title="Sohbeti Sil"
+                description="Bu sohbeti listenizden kaldırmak istediğinize emin misiniz? (Mesajlar diğer katılımcılarda kalmaya devam eder)"
+                confirmText="Sohbeti Sil"
+                variant="danger"
+            />
         </>
     )
 }

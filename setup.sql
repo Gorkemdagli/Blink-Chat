@@ -358,16 +358,20 @@ RETURNS JSON AS $$
 DECLARE
   target_user_id UUID;
   existing_friendship BOOLEAN;
-  existing_request BOOLEAN;
+  existing_request_status TEXT;
 BEGIN
+  -- 1. Hedef kullanıcıyı bul
   SELECT id INTO target_user_id FROM public.users WHERE user_code = target_code LIMIT 1;
   IF target_user_id IS NULL THEN
     RETURN json_build_object('success', false, 'error', 'User not found');
   END IF;
+  
+  -- 2. Kendini ekleme kontrolü
   IF target_user_id = auth.uid() THEN
     RETURN json_build_object('success', false, 'error', 'Cannot add yourself');
   END IF;
 
+  -- 3. Zaten arkadaş mısınız?
   SELECT EXISTS(
     SELECT 1 FROM public.friends
     WHERE user_id = auth.uid() AND friend_id = target_user_id
@@ -376,20 +380,26 @@ BEGIN
     RETURN json_build_object('success', false, 'error', 'Already friends');
   END IF;
 
-  SELECT EXISTS(
-    SELECT 1 FROM public.friend_requests
-    WHERE sender_id = auth.uid() AND receiver_id = target_user_id AND status = 'pending'
-  ) INTO existing_request;
-  IF existing_request THEN
+  -- 4. Mevcut bir istek var mı? (Herhangi bir statüde)
+  SELECT status INTO existing_request_status 
+  FROM public.friend_requests
+  WHERE sender_id = auth.uid() AND receiver_id = target_user_id
+  LIMIT 1;
+
+  IF existing_request_status = 'pending' THEN
     RETURN json_build_object('success', false, 'error', 'Request already sent');
   END IF;
 
-  INSERT INTO public.friend_requests (sender_id, receiver_id, status)
-  VALUES (auth.uid(), target_user_id, 'pending');
+  -- 5. Eğer 'rejected' ise statüyü tekrar 'pending' yap, değilse yeni ekle (UPSERT mantığı)
+  INSERT INTO public.friend_requests (sender_id, receiver_id, status, created_at, responded_at)
+  VALUES (auth.uid(), target_user_id, 'pending', now(), NULL)
+  ON CONFLICT (sender_id, receiver_id) 
+  DO UPDATE SET status = 'pending', created_at = now(), responded_at = NULL;
 
   RETURN json_build_object('success', true, 'message', 'Friend request sent', 'user_id', target_user_id);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
 
 -- Search user by 7-digit code
 CREATE OR REPLACE FUNCTION public.search_user_by_code(search_code INTEGER)
@@ -402,6 +412,53 @@ BEGIN
     LIMIT 1;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Invite user to room (with full validation & duplicate handling)
+CREATE OR REPLACE FUNCTION public.invite_to_room(p_room_id UUID, p_invitee_id UUID)
+RETURNS JSON AS $$
+DECLARE
+  existing_membership BOOLEAN;
+  existing_invitation_status TEXT;
+BEGIN
+  -- 1. Yetki Kontrolü: Davet eden kişi odayı oluşturan mı?
+  IF NOT EXISTS (SELECT 1 FROM public.rooms WHERE id = p_room_id AND created_by = auth.uid()) THEN
+    RETURN json_build_object('success', false, 'error', 'Only room creator can invite');
+  END IF;
+
+  -- 2. Kendini davet etme kontrolü
+  IF p_invitee_id = auth.uid() THEN
+    RETURN json_build_object('success', false, 'error', 'Cannot invite yourself');
+  END IF;
+
+  -- 3. Zaten üye mi?
+  SELECT EXISTS(
+    SELECT 1 FROM public.room_members
+    WHERE room_id = p_room_id AND user_id = p_invitee_id
+  ) INTO existing_membership;
+  IF existing_membership THEN
+    RETURN json_build_object('success', false, 'error', 'User is already a member');
+  END IF;
+
+  -- 4. Mevcut bir davet var mı?
+  SELECT status INTO existing_invitation_status
+  FROM public.room_invitations
+  WHERE room_id = p_room_id AND invitee_id = p_invitee_id
+  LIMIT 1;
+
+  IF existing_invitation_status = 'pending' THEN
+    RETURN json_build_object('success', false, 'error', 'Invitation already pending');
+  END IF;
+
+  -- 5. UPSERT mantığı: Reddedilmişse tekrar beklemeye al, yoksa ekle
+  INSERT INTO public.room_invitations (room_id, inviter_id, invitee_id, status, created_at, responded_at)
+  VALUES (p_room_id, auth.uid(), p_invitee_id, 'pending', now(), NULL)
+  ON CONFLICT (room_id, invitee_id)
+  DO UPDATE SET status = 'pending', inviter_id = auth.uid(), created_at = now(), responded_at = NULL;
+
+  RETURN json_build_object('success', true, 'message', 'Invitation sent');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 
 -- Optimized initial data fetch RPC
 CREATE OR REPLACE FUNCTION public.get_chat_init_data()
@@ -439,15 +496,21 @@ BEGIN
     'invitations', (SELECT COALESCE(json_agg(i), '[]'::json) FROM public.pending_invitations_with_details i WHERE invitee_id = uid),
     'last_messages', (
       SELECT COALESCE(json_agg(m_data), '[]'::json) FROM (
-        SELECT m.*, u.username, u.avatar_url
+        SELECT m.*, 
+               json_build_object(
+                 'id', u.id,
+                 'username', u.username,
+                 'avatar_url', u.avatar_url
+               ) as user
         FROM public.rooms r
         JOIN LATERAL (
           SELECT * FROM public.messages
           WHERE room_id = r.id
+          AND id NOT IN (SELECT message_id FROM public.message_deletions WHERE user_id = uid)
           ORDER BY created_at DESC
           LIMIT 1
         ) m ON true
-        JOIN public.users u ON m.user_id = u.id
+        LEFT JOIN public.users u ON m.user_id = u.id
         WHERE r.id IN (SELECT room_id FROM public.room_members WHERE user_id = uid)
           AND r.id NOT IN (SELECT room_id FROM public.room_deletions WHERE user_id = uid)
       ) m_data
@@ -458,7 +521,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Optimized message loading RPC with cursor pagination
+-- Optimized message loading RPC with cursor pagination (Improved with User Join)
 CREATE OR REPLACE FUNCTION public.get_chat_messages(
   p_room_id UUID,
   p_limit INTEGER DEFAULT 50,
@@ -486,8 +549,15 @@ BEGIN
   SELECT COALESCE(json_agg(t), '[]'::json)
   INTO result
   FROM (
-    SELECT m.*
+    SELECT m.*, 
+           json_build_object(
+             'id', u.id,
+             'username', u.username,
+             'avatar_url', u.avatar_url,
+             'email', u.email
+           ) as user
     FROM public.messages m
+    LEFT JOIN public.users u ON m.user_id = u.id
     WHERE m.room_id = p_room_id
       AND (p_before_created_at IS NULL OR m.created_at < p_before_created_at)
     ORDER BY m.created_at DESC
@@ -685,6 +755,15 @@ DROP POLICY IF EXISTS "Users can view their own message deletions" ON public.mes
 CREATE POLICY "Users can view their own message deletions" ON public.message_deletions
   FOR SELECT TO authenticated USING (user_id = auth.uid());
 
+-- Room Deletions
+DROP POLICY IF EXISTS "Users can hide rooms from their list" ON public.room_deletions;
+CREATE POLICY "Users can hide rooms from their list" ON public.room_deletions
+  FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
+DROP POLICY IF EXISTS "Users can view their own room deletions" ON public.room_deletions;
+CREATE POLICY "Users can view their own room deletions" ON public.room_deletions
+  FOR SELECT TO authenticated USING (user_id = auth.uid());
+
+
 
 -- ============================================
 -- 8. STORAGE SETUP (chat-files & avatars)
@@ -752,6 +831,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.room_members;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.friend_requests;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.friends;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.room_invitations;
+ALTER TABLE public.room_invitations REPLICA IDENTITY FULL;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.message_deletions;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.room_deletions;
 
