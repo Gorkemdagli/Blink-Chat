@@ -109,7 +109,7 @@ export default function Chat({ session, darkMode, onToggleDarkMode }: ChatProps)
             )}
 
             {/* Ana Layout */}
-            <div className={`flex h-screen w-full bg-white dark:bg-slate-900 overflow-hidden relative`}>
+            <div className={`flex h-[100dvh] w-full bg-white dark:bg-slate-900 overflow-hidden relative`}>
                 {/* Sidebar */}
                 <div className={`${view === 'sidebar' ? 'flex' : 'hidden'} md:flex w-full md:w-[320px] shrink-0 border-r border-gray-100 dark:border-slate-800`}>
                     <Sidebar

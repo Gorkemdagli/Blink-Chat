@@ -251,7 +251,7 @@ function App() {
   // Show loading screen while checking session
   if (loading) {
     return (
-      <div className="h-screen w-full bg-gray-50 dark:bg-slate-900 flex items-center justify-center transition-colors">
+      <div className="h-[100dvh] w-full bg-gray-50 dark:bg-slate-900 flex items-center justify-center transition-colors">
         <div className="text-center">
           <div className="animate-spin inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">Yükleniyor...</p>
@@ -261,7 +261,7 @@ function App() {
   }
 
   return (
-    <div className="h-screen w-full bg-gray-50 dark:bg-slate-900">
+    <div className="h-[100dvh] w-full bg-gray-50 dark:bg-slate-900">
       {!session ? (
         <Auth onAuth={setSession} darkMode={darkMode} onToggleDarkMode={toggleDarkMode} />
       ) : (
