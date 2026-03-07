@@ -232,6 +232,11 @@ jobs:
           VITE_SUPABASE_URL: https://placeholder.supabase.co
           VITE_SUPABASE_ANON_KEY: placeholder-key-for-ci
           VITE_HCAPTCHA_SITE_KEY: 10000000-ffff-ffff-ffff-000000000001
+          # Backend Env (Needed because webServer starts the backend)
+          SUPABASE_URL: https://placeholder.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: placeholder-key-for-ci
+          REDIS_HOST: localhost
+          NODE_ENV: test
 
       - name: Upload Playwright Report
         if: always()
