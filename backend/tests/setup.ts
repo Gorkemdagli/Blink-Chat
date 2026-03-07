@@ -84,13 +84,24 @@ jest.mock('../supabaseClient', () => ({
 }));
 
 // Mock Redis to avoid connection errors during tests
-const mockRedis = {
-    get: jest.fn().mockResolvedValue(null),
-    set: jest.fn().mockResolvedValue('OK'),
-    on: jest.fn(),
-};
+jest.mock('../redisClient', () => {
+    const mockRedis = {
+        get: jest.fn().mockResolvedValue(null),
+        set: jest.fn().mockResolvedValue('OK'),
+        publish: jest.fn().mockResolvedValue(0),
+        subscribe: jest.fn().mockResolvedValue(null),
+        psubscribe: jest.fn().mockResolvedValue(null),
+        unsubscribe: jest.fn().mockResolvedValue(null),
+        punsubscribe: jest.fn().mockResolvedValue(null),
+        duplicate: jest.fn().mockImplementation(() => ({
+            ...mockRedis,
+            on: jest.fn(),
+        })),
+        on: jest.fn(),
+    };
 
-jest.mock('../redisClient', () => ({
-    __esModule: true,
-    default: mockRedis,
-}));
+    return {
+        __esModule: true,
+        default: mockRedis,
+    };
+});
