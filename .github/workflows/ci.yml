@@ -243,7 +243,7 @@ jobs:
           SUPABASE_URL: https://placeholder.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: placeholder-key-for-ci
           REDIS_HOST: localhost
-          NODE_ENV: test
+          NODE_ENV: production
 
       - name: Upload Playwright Report
         if: always()
