@@ -28,5 +28,7 @@ services:
         value: admin
       - key: SWAGGER_PASSWORD
         sync: false
+      - key: DATABASE_URL
+        sync: false # Supabase > Settings > Database > Connection String (Transaction mode)
     healthCheckPath: /health
     autoDeploy: true
