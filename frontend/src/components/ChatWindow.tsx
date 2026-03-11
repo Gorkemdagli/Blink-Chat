@@ -233,26 +233,31 @@ export default function ChatWindow({
 
   // Android Geri Tuşu / Yandan Kaydırma Kontrolü
   useEffect(() => {
-    let popped = false
+    // Component unmount olduğunda history.back() yapmamızı belirleyen flag
+    let shouldBackOnUnmount = true;
 
+    // Kullanıcı donanımsal geri tuşuna (veya yandan swipe) bastığında çalışır
     const handlePopState = () => {
-      popped = true
-      onBack()
-    }
+      // popstate tetiklendiği için kendi onBack'imizi çağırıyoruz
+      shouldBackOnUnmount = false;
+      onBack();
+    };
 
-    // Ekran açıldığında history'ye dummy bir state ekle
-    window.history.pushState({ chatOpen: true }, '', window.location.href)
-    window.addEventListener('popstate', handlePopState)
+    // Mevcut state'e dummy bir obje push ederek history yığınına bir eleman ekliyoruz.
+    // Bu sayede kullanıcı geri basarsa tarayıcıdan çıkmak yerine bir önceki state'e (boş state) döner
+    // ve bizim handlePopState tetiklenir.
+    window.history.pushState({ chat: 'open', roomId: selectedRoom?.id }, '');
+    window.addEventListener('popstate', handlePopState);
 
     return () => {
-      window.removeEventListener('popstate', handlePopState)
-      // Eğer kullanıcı arayüzdeki Geri butonuna bastıysa (popstate tetiklenmeden unmount olduysa),
-      // history'ye eklediğimiz state'i manuel olarak geri alalım ki fazladan tıklama gereği kalmasın.
-      if (!popped) {
-        window.history.back()
+      window.removeEventListener('popstate', handlePopState);
+      // Eğer kullanıcı sol üstteki Geri ikonuna basarak unmount etmişse (popstate tetiklenmeden),
+      // history'de bıraktığımız fazlalık state'i manuel temizlemeliyiz.
+      if (shouldBackOnUnmount) {
+        window.history.back();
       }
-    }
-  }, [onBack])
+    };
+  }, [onBack, selectedRoom?.id]);
 
   // Long press timer cleanup
   useEffect(() => {
