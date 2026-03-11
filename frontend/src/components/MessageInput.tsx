@@ -133,7 +133,6 @@ export default function MessageInput({
                                     title="Görsel Seç"
                                     onClick={(e) => { e.currentTarget.value = '' }}
                                     onChange={(e) => {
-                                        setShowAttachMenu(false)
                                         handleFileSelect(e)
                                     }}
                                 />
@@ -143,12 +142,11 @@ export default function MessageInput({
                             <div className="relative flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md text-sm text-gray-700 dark:text-gray-200 transition-colors w-full text-left font-medium overflow-hidden">
                                 <input
                                     type="file"
-                                    accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,*/*"
+                                    accept="*"
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                     title="Dosya Seç"
                                     onClick={(e) => { e.currentTarget.value = '' }}
                                     onChange={(e) => {
-                                        setShowAttachMenu(false)
                                         handleFileSelect(e)
                                     }}
                                 />

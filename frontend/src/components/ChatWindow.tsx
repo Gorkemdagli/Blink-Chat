@@ -231,6 +231,29 @@ export default function ChatWindow({
     }
   }, [])
 
+  // Android Geri Tuşu / Yandan Kaydırma Kontrolü
+  useEffect(() => {
+    let popped = false
+
+    const handlePopState = () => {
+      popped = true
+      onBack()
+    }
+
+    // Ekran açıldığında history'ye dummy bir state ekle
+    window.history.pushState({ chatOpen: true }, '', window.location.href)
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+      // Eğer kullanıcı arayüzdeki Geri butonuna bastıysa (popstate tetiklenmeden unmount olduysa),
+      // history'ye eklediğimiz state'i manuel olarak geri alalım ki fazladan tıklama gereği kalmasın.
+      if (!popped) {
+        window.history.back()
+      }
+    }
+  }, [onBack])
+
   // Long press timer cleanup
   useEffect(() => {
     return () => {
