@@ -241,24 +241,35 @@ export default function ChatWindow({
   useEffect(() => {
     if (!selectedRoom?.id) return;
 
-    // Kullanıcı donanımsal geri tuşuna (veya yandan swipe) bastığında çalışır
+    // Odaya girildiğinde URL hash'ini güncelle (zaten yoksa)
+    if (window.location.hash !== '#chat') {
+      window.history.pushState(null, '', window.location.pathname + window.location.search + '#chat');
+    }
+
     const handlePopState = () => {
-      onBackRef.current();
+      // Swipe back veya donanım geri tuşuna basıldığında hash silinir
+      if (window.location.hash !== '#chat') {
+        onBackRef.current();
+      }
     };
 
-    // Mevcut state'e objemizi push ederek history yığınına bir eleman ekliyoruz.
-    window.history.pushState({ isChatOpen: true, roomId: selectedRoom.id }, '');
     window.addEventListener('popstate', handlePopState);
 
     return () => {
       window.removeEventListener('popstate', handlePopState);
-      // Eğer kullanıcı sol üstteki Geri ikonuna basarak unmount etmişse (veya masaüstünde başka odaya geçmişse),
-      // history'de bıraktığımız fazlalık state'i manuel temizlemeliyiz. (Sadece kendi state'imizse)
-      if (window.history.state && window.history.state.isChatOpen && window.history.state.roomId === selectedRoom.id) {
-        window.history.back();
-      }
+      // Cleanup'ta history.back() çağırmıyoruz! Bu sayede unmount/remount race condition'ları oluşmuyor.
     };
   }, [selectedRoom?.id]);
+
+  // UI içerisindeki geri tiklama fonksiyonu. 
+  // Race condition oluşmaması için doğrudan React stateni değiştirmek yerine tarayıcının history API'sini kullanıyoruz.
+  const handleHardwareSafeBack = () => {
+    if (window.location.hash === '#chat') {
+      window.history.back(); // Bu işlem popstate'i tetikler ve unmount handlePopState üzerinden güvenle yapılır.
+    } else {
+      onBack();
+    }
+  };
 
   // Long press timer cleanup
   useEffect(() => {
@@ -659,7 +670,7 @@ export default function ChatWindow({
     >
       <ChatHeader
         selectedRoom={selectedRoom}
-        onBack={onBack}
+        onBack={handleHardwareSafeBack}
         onUserClick={handleUserClick}
         userPresence={userPresence}
         lastMessages={lastMessages}
