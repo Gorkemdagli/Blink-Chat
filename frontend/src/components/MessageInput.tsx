@@ -1,6 +1,7 @@
 import { Paperclip, Smile, Send, Image as ImageIcon, File as FileIcon, X } from 'lucide-react'
 import Picker from '@emoji-mart/react'
 import data from '@emoji-mart/data'
+import { useRef } from 'react'
 
 interface MessageInputProps {
     inputValue: string
@@ -15,7 +16,6 @@ interface MessageInputProps {
     showEmojiPicker: boolean
     toggleEmojiPicker: () => void
     handleEmojiSelect: (emoji: any) => void
-
     handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void
     emojiPickerRef: React.RefObject<HTMLDivElement | null>
     attachMenuRef: React.RefObject<HTMLDivElement | null>
@@ -49,8 +49,30 @@ export default function MessageInput({
         return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]
     }
 
+    // Android/Mobile file intent fix: Keep inputs mounted but hidden
+    const imageInputRef = useRef<HTMLInputElement>(null)
+    const fileInputRef = useRef<HTMLInputElement>(null)
+
     return (
         <div className="h-[72px] md:h-[80px] px-2 md:px-6 bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-slate-800 shrink-0 relative flex items-center">
+            {/* Hidden Permanent Inputs for Mobile intents */}
+            <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                ref={imageInputRef}
+                onClick={(e) => { e.currentTarget.value = '' }}
+                onChange={handleFileSelect}
+            />
+            <input
+                type="file"
+                accept="*"
+                className="hidden"
+                ref={fileInputRef}
+                onClick={(e) => { e.currentTarget.value = '' }}
+                onChange={handleFileSelect}
+            />
+
             {/* Emoji Picker */}
             {showEmojiPicker && (
                 <div
@@ -77,7 +99,7 @@ export default function MessageInput({
                 {selectedFile && (
                     <div className="absolute bottom-full left-0 mb-4 ml-2 md:ml-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl p-3 flex items-center gap-4 shadow-2xl z-40 animate-in slide-in-from-bottom-2">
                         <div className="bg-sky-50 dark:bg-sky-900/30 p-2.5 rounded-xl text-sky-500">
-                            {selectedFile.type.startsWith('image/') ? <ImageIcon size={24} /> : <FileIcon size={24} />}
+                            {(selectedFile.type || '').startsWith('image/') ? <ImageIcon size={24} /> : <FileIcon size={24} />}
                         </div>
                         <div className="flex flex-col max-w-[150px] md:max-w-md">
                             <span className="text-sm font-bold text-slate-800 dark:text-white truncate">{selectedFile.name}</span>
@@ -125,31 +147,23 @@ export default function MessageInput({
                             aria-label="Dosya Ekleme Seçenekleri"
                             className="absolute bottom-full right-2 md:right-6 mb-2 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-100 dark:border-slate-700 p-2 flex flex-col gap-1 min-w-[140px] z-50 animate-in fade-in slide-in-from-bottom-2"
                         >
-                            <div className="relative flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md text-sm text-gray-700 dark:text-gray-200 transition-colors w-full text-left font-medium overflow-hidden">
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                    title="Görsel Seç"
-                                    onClick={(e) => { e.currentTarget.value = '' }}
-                                    onChange={(e) => {
-                                        handleFileSelect(e)
-                                    }}
-                                />
+                            <div 
+                                onClick={() => {
+                                    setShowAttachMenu(false);
+                                    imageInputRef.current?.click();
+                                }}
+                                className="relative flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md text-sm text-gray-700 dark:text-gray-200 transition-colors w-full text-left font-medium overflow-hidden cursor-pointer"
+                            >
                                 <ImageIcon size={16} className="text-purple-500 relative z-0" aria-hidden="true" />
                                 <span className="relative z-0">Görsel Gönder</span>
                             </div>
-                            <div className="relative flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md text-sm text-gray-700 dark:text-gray-200 transition-colors w-full text-left font-medium overflow-hidden">
-                                <input
-                                    type="file"
-                                    accept="*"
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                    title="Dosya Seç"
-                                    onClick={(e) => { e.currentTarget.value = '' }}
-                                    onChange={(e) => {
-                                        handleFileSelect(e)
-                                    }}
-                                />
+                            <div 
+                                onClick={() => {
+                                    setShowAttachMenu(false);
+                                    fileInputRef.current?.click();
+                                }}
+                                className="relative flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md text-sm text-gray-700 dark:text-gray-200 transition-colors w-full text-left font-medium overflow-hidden cursor-pointer"
+                            >
                                 <FileIcon size={16} className="text-blue-500 relative z-0" aria-hidden="true" />
                                 <span className="relative z-0">Dosya Gönder</span>
                             </div>
