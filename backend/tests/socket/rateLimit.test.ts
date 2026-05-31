@@ -1,20 +1,16 @@
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import Redis from 'ioredis';
-
-// Use Upstash Redis directly (same credentials as .env)
-const REDIS_HOST = 'sincere-gorilla-140752.upstash.io';
-const REDIS_PORT = 6379;
-const REDIS_PASSWORD = 'gQAAAAAAAiXQAAIgcDIxZjViYmNjZGM1YjI0ODYxOTJhNDRkMTAyYWU3YWQ2Mw';
+import { env } from '../../config/env';
 
 function createTestRedisClient() {
     const options: any = {
-        host: REDIS_HOST,
-        port: REDIS_PORT,
+        host: env.REDIS_HOST,
+        port: parseInt(env.REDIS_PORT, 10),
         username: 'default',
-        password: REDIS_PASSWORD,
+        password: env.REDIS_PASSWORD || undefined,
         maxRetriesPerRequest: 5,
         retryStrategy: (times: number) => Math.min(times * 200, 2000),
-        tls: { rejectUnauthorized: false },
+        tls: env.REDIS_TLS === 'true' ? { rejectUnauthorized: false } : undefined,
     };
     const client = new Redis(options);
 
