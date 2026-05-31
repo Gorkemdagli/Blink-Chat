@@ -3,12 +3,7 @@ import supabase from '../supabaseClient';
 import redis from '../redisClient';
 import logger from '../config/logger';
 import { MessageController } from '../controllers/messageController';
-
-// in-memory map yerine, ölçeklenebilirlik için Redis + Socket.io rooms (user:userId) kullanıyoruz
-
-// Socket rate limiter (mesaj başına 500ms cooldown)
-const lastMessageTime = new Map<string, number>();
-const MESSAGE_COOLDOWN_MS = 500;
+import { env } from '../config/env';
 
 export function setupSocketHandlers(io: Server) {
     // ─── JWT Authentication Middleware ───
@@ -40,6 +35,21 @@ export function setupSocketHandlers(io: Server) {
 
     io.on('connection', async (socket: Socket) => {
         const userId = socket.data.userId;
+
+        // ─── Connection Limit (before any other processing) ───
+        const maxConnections = parseInt(env.SOCKET_MAX_CONNECTIONS, 10);
+        const connectionKey = `connections:${userId}`;
+
+        const currentCount = await redis.incr(connectionKey);
+        if (currentCount > maxConnections) {
+            await redis.decr(connectionKey); // rollback the incr
+            logger.warn(`Connection rejected: user ${userId} exceeded max connections (${maxConnections})`);
+            socket.emit('error', `Maximum ${maxConnections} concurrent connections allowed.`);
+            socket.disconnect(true);
+            return;
+        }
+        // Safety: set 24h expiry so orphaned keys eventually clear
+        await redis.expire(connectionKey, 86400);
 
         // Bağlantı anında güvenilir username'i Redis/DB'den çek
         let username = 'Unknown';
@@ -110,15 +120,15 @@ export function setupSocketHandlers(io: Server) {
         });
 
         // ─── sendMessage: Rate limit + userId override ───
-        socket.on('sendMessage', (data: any) => {
-            const now = Date.now();
-            const last = lastMessageTime.get(socket.id) || 0;
+        socket.on('sendMessage', async (data: any) => {
+            const rateLimitKey = `ratelimit:msg:${socket.id}`;
+            const windowMs = parseInt(env.SOCKET_RATE_LIMIT_MS, 10);
 
-            if (now - last < MESSAGE_COOLDOWN_MS) {
-                socket.emit('error', 'Çok hızlı mesaj gönderiyorsunuz.');
+            const allowed = await (redis as any).rateLimitMsg(rateLimitKey, windowMs);
+            if (!allowed) {
+                socket.emit('rate_limited', { retryAfter: windowMs });
                 return;
             }
-            lastMessageTime.set(socket.id, now);
 
             // Client'in gönderdiği userId'yi yok say, token'dan gelen güvenli değeri kullan
             const safeData = { ...data, userId };
@@ -148,7 +158,12 @@ export function setupSocketHandlers(io: Server) {
 
         socket.on('disconnect', async (reason: string) => {
             logger.info(`User disconnected: ${socket.id} (uid: ${userId}) | Reason: ${reason} | Total: ${io.engine.clientsCount}`);
-            lastMessageTime.delete(socket.id);
+
+            try {
+                await (redis as any).decrementConnections(connectionKey);
+            } catch (err) {
+                logger.error('decrementConnections error:', err);
+            }
 
             try {
                 // Adapter üzerinden tüm sunuculardaki user odasını kontrol et
