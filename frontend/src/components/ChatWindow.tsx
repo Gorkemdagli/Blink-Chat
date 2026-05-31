@@ -245,8 +245,8 @@ export default function ChatWindow({
   // then calls parent's onBack to unmount this component.
   // Called by both UI back button and popstate when sentinel === 1.
   const closeChatWithHistory = () => {
-    if (chatHistorySentinel <= 0) {
-      // Safety guard: if sentinel is already 0, just close without history manipulation
+    if (chatHistorySentinel < 0) {
+      // Safety guard: sentinel negative means already closed/depleted, just close
       onBackRef.current();
       return;
     }
