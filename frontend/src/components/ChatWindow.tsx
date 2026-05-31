@@ -241,6 +241,21 @@ export default function ChatWindow({
     onBackRef.current = onBack;
   }, [onBack]);
 
+  // Controlled chat close: removes #chat via replaceState, decrements sentinel,
+  // then calls parent's onBack to unmount this component.
+  // Called by both UI back button and popstate when sentinel === 1.
+  const closeChatWithHistory = () => {
+    if (chatHistorySentinel <= 0) {
+      // Safety guard: if sentinel is already 0, just close without history manipulation
+      onBackRef.current();
+      return;
+    }
+    // Remove #chat from URL without triggering popstate
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    chatHistorySentinel--;
+    onBackRef.current();
+  };
+
   // Android Geri Tuşu / Yandan Kaydırma Kontrolü
   useEffect(() => {
     if (!selectedRoom?.id) return;
