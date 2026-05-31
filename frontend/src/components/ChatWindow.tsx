@@ -19,6 +19,10 @@ import MessageInput from './MessageInput'
 import GroupInfoModal from './GroupInfoModal'
 import ConfirmModal from './ConfirmModal'
 
+// History sentinel: counts active #chat pushState entries.
+// Increment on mount/room-change (pushState). Decrement on controlled close (replaceState).
+// Cleanup does NOT touch this — unmount via popstate is handled separately.
+let chatHistorySentinel = 0;
 
 interface ChatWindowProps {
   selectedRoom: Room
