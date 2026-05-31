@@ -19,10 +19,18 @@ import MessageInput from './MessageInput'
 import GroupInfoModal from './GroupInfoModal'
 import ConfirmModal from './ConfirmModal'
 
-// History sentinel: counts active #chat pushState entries.
-// Increment on mount/room-change (pushState). Decrement on controlled close (replaceState).
-// Cleanup does NOT touch this — unmount via popstate is handled separately.
-let chatHistorySentinel = 0;
+// Single-entry invariant: at most one #chat history entry exists at any time.
+const ensureHistoryEntry = (action: 'init' | 'update' | 'close') => {
+  if (action === 'init') {
+    window.history.pushState(null, '', window.location.pathname + window.location.search + '#chat');
+  } else if (action === 'update') {
+    // Room changed — replace existing entry instead of stacking
+    window.history.replaceState(null, '', window.location.pathname + window.location.search + '#chat');
+  } else {
+    // close: remove #chat from URL
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+  }
+};
 
 interface ChatWindowProps {
   selectedRoom: Room
@@ -86,7 +94,8 @@ export default function ChatWindow({
   const previousRoomIdRef = useRef<string | null>(null)
   const emojiPickerRef = useRef<HTMLDivElement>(null)
   const attachMenuRef = useRef<HTMLDivElement>(null)
-  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const hasInitializedRef = useRef(false);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isUploading, setIsUploading] = useState(false)
   const [showAttachMenu, setShowAttachMenu] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -241,18 +250,10 @@ export default function ChatWindow({
     onBackRef.current = onBack;
   }, [onBack]);
 
-  // Controlled chat close: removes #chat via replaceState, decrements sentinel,
+  // Controlled chat close: removes #chat via replaceState,
   // then calls parent's onBack to unmount this component.
-  // Called by both UI back button and popstate when sentinel === 1.
   const closeChatWithHistory = () => {
-    if (chatHistorySentinel < 0) {
-      // Safety guard: sentinel negative means already closed/depleted, just close
-      onBackRef.current();
-      return;
-    }
-    // Remove #chat from URL without triggering popstate
-    window.history.replaceState(null, '', window.location.pathname + window.location.search);
-    chatHistorySentinel--;
+    ensureHistoryEntry('close');
     onBackRef.current();
   };
 
@@ -260,32 +261,28 @@ export default function ChatWindow({
   useEffect(() => {
     if (!selectedRoom?.id) return;
 
-    // Her oda değişikliğinde pushState yap — sentinel'i her zaman artır
-    window.history.pushState(null, '', window.location.pathname + window.location.search + '#chat');
-    chatHistorySentinel++;
+    // init: push new #chat entry only on first mount (not on stable re-renders)
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      ensureHistoryEntry('init');
+    }
 
     const handlePopState = () => {
-      // Donanım geri tuşu veya swipe back — browser zaten history'e back yaptı
-      // Sentinel > 1 → başka #chat entry var, sadece azalt, chat açık kalsın
-      // Sentinel === 1 → son #chat entry tüketildi, chat'i kapat
-      if (chatHistorySentinel > 1) {
-        chatHistorySentinel--;
-      } else if (chatHistorySentinel === 1) {
-        chatHistorySentinel--;
-        closeChatWithHistory();
-      }
-      // sentinel < 1: zaten 0 veya negatif, bir şey yapma
+      // Browser back triggered — close chat
+      closeChatWithHistory();
     };
 
     window.addEventListener('popstate', handlePopState);
 
     return () => {
       window.removeEventListener('popstate', handlePopState);
-      // NOT: cleanup'ta sentinel AZALTMIYORUZ.
-      // Unmount popstate üzerinden zaten handle ediliyor (sentinel === 1 durumu).
-      // currentRoom null olmadan ChatWindow unmount olmaz — tüm unmount'lar
-      // closeChatWithHistory üzerinden sentinel-- ile birlikte gerçekleşir.
     };
+  }, [selectedRoom?.id]);
+
+  // Sync #chat entry on room change — replace existing entry, don't stack
+  useEffect(() => {
+    if (!selectedRoom?.id) return;
+    ensureHistoryEntry('update');
   }, [selectedRoom?.id]);
 
   // UI içerisindeki geri butonu — her zaman chat'i kapatır (controlled close)

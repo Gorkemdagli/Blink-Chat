@@ -109,6 +109,100 @@ describe('ChatWindow History Sentinel', () => {
         expect(hasChatHash).toBe(true);
     });
 
+    it('room change calls replaceState (not pushState) — no stacking', async () => {
+        const onBack = vi.fn();
+        const { rerender } = render(
+            <ChatWindow
+                selectedRoom={{ id: 'room1', name: 'Test', type: 'private' } as any}
+                messages={[]}
+                session={{ user: { id: 'user1' } } as any}
+                onSendMessage={vi.fn()}
+                onBack={onBack}
+                currentUser={{ id: 'user1', username: 'me' } as any}
+                isLoadingMessages={false}
+                isLoadingMoreMessages={false}
+                hasMoreMessages={false}
+                userPresence={new Map()}
+            />
+        );
+
+        await act(async () => { await new Promise(r => setTimeout(r, 50)); });
+
+        const pushCountBefore = pushStateCallCount;
+        const replaceCountBefore = replaceStateCallCount;
+
+        // Simulate room change
+        rerender(
+            <ChatWindow
+                selectedRoom={{ id: 'room2', name: 'Test2', type: 'private' } as any}
+                messages={[]}
+                session={{ user: { id: 'user1' } } as any}
+                onSendMessage={vi.fn()}
+                onBack={onBack}
+                currentUser={{ id: 'user1', username: 'me' } as any}
+                isLoadingMessages={false}
+                isLoadingMoreMessages={false}
+                hasMoreMessages={false}
+                userPresence={new Map()}
+            />
+        );
+
+        await act(async () => { await new Promise(r => setTimeout(r, 50)); });
+
+        // Room change should replace, not push — pushState count unchanged
+        expect(pushStateCallCount).toBe(pushCountBefore);
+        expect(replaceStateCallCount).toBeGreaterThan(replaceCountBefore);
+    });
+
+    it('StrictMode double-mount: back closes chat on first press', async () => {
+        const onBack = vi.fn();
+
+        const { unmount, rerender } = render(
+            <ChatWindow
+                selectedRoom={{ id: 'room1', name: 'Test', type: 'private' } as any}
+                messages={[]}
+                session={{ user: { id: 'user1' } } as any}
+                onSendMessage={vi.fn()}
+                onBack={onBack}
+                currentUser={{ id: 'user1', username: 'me' } as any}
+                isLoadingMessages={false}
+                isLoadingMoreMessages={false}
+                hasMoreMessages={false}
+                userPresence={new Map()}
+            />
+        );
+
+        await act(async () => { await new Promise(r => setTimeout(r, 50)); });
+
+        // Simulate StrictMode unmount/remount
+        unmount();
+
+        const { unmount: unmount2 } = render(
+            <ChatWindow
+                selectedRoom={{ id: 'room1', name: 'Test', type: 'private' } as any}
+                messages={[]}
+                session={{ user: { id: 'user1' } } as any}
+                onSendMessage={vi.fn()}
+                onBack={onBack}
+                currentUser={{ id: 'user1', username: 'me' } as any}
+                isLoadingMessages={false}
+                isLoadingMoreMessages={false}
+                hasMoreMessages={false}
+                userPresence={new Map()}
+            />
+        );
+
+        await act(async () => { await new Promise(r => setTimeout(r, 50)); });
+
+        // Back button triggers replaceState and onBack — chat closes cleanly
+        fireEvent.click(screen.getByTestId('header-back'));
+        await act(async () => { await new Promise(r => setTimeout(r, 50)); });
+
+        expect(replaceStateCallCount).toBeGreaterThan(0);
+        expect(onBack).toHaveBeenCalled();
+        unmount2();
+    });
+
     it('replaceState called when header back button clicked', async () => {
         const onBack = vi.fn();
         render(
