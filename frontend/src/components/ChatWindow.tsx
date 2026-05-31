@@ -19,6 +19,10 @@ import MessageInput from './MessageInput'
 import GroupInfoModal from './GroupInfoModal'
 import ConfirmModal from './ConfirmModal'
 
+// History sentinel: counts active #chat pushState entries.
+// Increment on mount/room-change (pushState). Decrement on controlled close (replaceState).
+// Cleanup does NOT touch this — unmount via popstate is handled separately.
+let chatHistorySentinel = 0;
 
 interface ChatWindowProps {
   selectedRoom: Room
@@ -230,6 +234,65 @@ export default function ChatWindow({
       window.removeEventListener('chat-image-loaded', handleResizeOrImageLoad)
     }
   }, [])
+
+  // onBack fonksiyonunun referansı sürekli değiştiği için effect'i tetiklemesini önleyen Ref
+  const onBackRef = useRef(onBack);
+  useEffect(() => {
+    onBackRef.current = onBack;
+  }, [onBack]);
+
+  // Controlled chat close: removes #chat via replaceState, decrements sentinel,
+  // then calls parent's onBack to unmount this component.
+  // Called by both UI back button and popstate when sentinel === 1.
+  const closeChatWithHistory = () => {
+    if (chatHistorySentinel < 0) {
+      // Safety guard: sentinel negative means already closed/depleted, just close
+      onBackRef.current();
+      return;
+    }
+    // Remove #chat from URL without triggering popstate
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    chatHistorySentinel--;
+    onBackRef.current();
+  };
+
+  // Android Geri Tuşu / Yandan Kaydırma Kontrolü
+  useEffect(() => {
+    if (!selectedRoom?.id) return;
+
+    // Her oda değişikliğinde pushState yap — sentinel'i her zaman artır
+    window.history.pushState(null, '', window.location.pathname + window.location.search + '#chat');
+    chatHistorySentinel++;
+
+    const handlePopState = () => {
+      // Donanım geri tuşu veya swipe back — browser zaten history'e back yaptı
+      // Sentinel > 1 → başka #chat entry var, sadece azalt, chat açık kalsın
+      // Sentinel === 1 → son #chat entry tüketildi, chat'i kapat
+      if (chatHistorySentinel > 1) {
+        chatHistorySentinel--;
+      } else if (chatHistorySentinel === 1) {
+        chatHistorySentinel--;
+        closeChatWithHistory();
+      }
+      // sentinel < 1: zaten 0 veya negatif, bir şey yapma
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      // NOT: cleanup'ta sentinel AZALTMIYORUZ.
+      // Unmount popstate üzerinden zaten handle ediliyor (sentinel === 1 durumu).
+      // currentRoom null olmadan ChatWindow unmount olmaz — tüm unmount'lar
+      // closeChatWithHistory üzerinden sentinel-- ile birlikte gerçekleşir.
+    };
+  }, [selectedRoom?.id]);
+
+  // UI içerisindeki geri butonu — her zaman chat'i kapatır (controlled close)
+  // replaceState kullanır (popstate tetiklemez), sentinel azaltılır
+  const handleHardwareSafeBack = () => {
+    closeChatWithHistory();
+  };
 
   // Long press timer cleanup
   useEffect(() => {
@@ -630,7 +693,7 @@ export default function ChatWindow({
     >
       <ChatHeader
         selectedRoom={selectedRoom}
-        onBack={onBack}
+        onBack={handleHardwareSafeBack}
         onUserClick={handleUserClick}
         userPresence={userPresence}
         lastMessages={lastMessages}

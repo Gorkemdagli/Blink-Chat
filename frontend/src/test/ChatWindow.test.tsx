@@ -1,6 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import ChatWindow from '../components/ChatWindow';
+
+// Spy refs (reset in each beforeEach)
+let pushStateCallCount = 0;
+let replaceStateCallCount = 0;
 
 // Mock dependencies to avoid errors during rendering
 vi.mock('lucide-react', () => ({
@@ -9,7 +13,7 @@ vi.mock('lucide-react', () => ({
     Paperclip: () => <span data-testid="icon-clip">Clip</span>,
     Smile: () => <span data-testid="icon-smile">Smile</span>,
     Send: () => <span data-testid="icon-send">Send</span>,
-    ArrowLeft: () => <span data-testid="icon-back">Back</span>,
+    ArrowLeft: (props: any) => <button data-testid="icon-back" onClick={props.onClick}>Back</button>,
     X: () => <span data-testid="icon-x">X</span>,
     Download: () => <span data-testid="icon-download">Download</span>,
     FileText: () => <span data-testid="icon-filetext">FileText</span>,
@@ -33,7 +37,12 @@ vi.mock('../socket', () => ({
 }));
 
 vi.mock('../components/ChatHeader', () => ({
-    default: () => <div data-testid="chat-header">ChatHeader</div>
+    default: ({ onBack }: any) => (
+        <div data-testid="chat-header">
+            <button data-testid="header-back" onClick={onBack}>Geri</button>
+            Header
+        </div>
+    )
 }));
 vi.mock('../components/MessageList', () => ({
     default: (props: any) => (
@@ -61,6 +70,101 @@ vi.mock('../components/GroupInfoModal', () => ({
     default: () => <div data-testid="group-info-modal">GroupInfoModal</div>
 }));
 
+// --- History Sentinel Tests ---
+
+describe('ChatWindow History Sentinel', () => {
+    beforeEach(() => {
+        pushStateCallCount = 0;
+        replaceStateCallCount = 0;
+        vi.spyOn(window.history, 'pushState').mockImplementation(() => { pushStateCallCount++; });
+        vi.spyOn(window.history, 'replaceState').mockImplementation(() => { replaceStateCallCount++; });
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('pushState called with #chat on mount', async () => {
+        const onBack = vi.fn();
+        render(
+            <ChatWindow
+                selectedRoom={{ id: 'room1', name: 'Test', type: 'private' } as any}
+                messages={[]}
+                session={{ user: { id: 'user1' } } as any}
+                onSendMessage={vi.fn()}
+                onBack={onBack}
+                currentUser={{ id: 'user1', username: 'me' } as any}
+                isLoadingMessages={false}
+                isLoadingMoreMessages={false}
+                hasMoreMessages={false}
+                userPresence={new Map()}
+            />
+        );
+
+        await act(async () => { await new Promise(r => setTimeout(r, 50)); });
+
+        expect(pushStateCallCount).toBeGreaterThan(0);
+        const calls = (window.history.pushState as any).mock.calls;
+        const hasChatHash = calls.some((call: any[]) => call[2]?.includes('#chat'));
+        expect(hasChatHash).toBe(true);
+    });
+
+    it('replaceState called when header back button clicked', async () => {
+        const onBack = vi.fn();
+        render(
+            <ChatWindow
+                selectedRoom={{ id: 'room1', name: 'Test', type: 'private' } as any}
+                messages={[]}
+                session={{ user: { id: 'user1' } } as any}
+                onSendMessage={vi.fn()}
+                onBack={onBack}
+                currentUser={{ id: 'user1', username: 'me' } as any}
+                isLoadingMessages={false}
+                isLoadingMoreMessages={false}
+                hasMoreMessages={false}
+                userPresence={new Map()}
+            />
+        );
+
+        await act(async () => { await new Promise(r => setTimeout(r, 50)); });
+        pushStateCallCount = 0;
+
+        fireEvent.click(screen.getByTestId('header-back'));
+
+        await act(async () => { await new Promise(r => setTimeout(r, 50)); });
+
+        expect(replaceStateCallCount).toBeGreaterThan(0);
+        expect(onBack).toHaveBeenCalled();
+    });
+
+    it('cleanup does NOT call history.back()', async () => {
+        const historyBackSpy = vi.spyOn(window.history, 'back');
+
+        const onBack = vi.fn();
+        const { unmount } = render(
+            <ChatWindow
+                selectedRoom={{ id: 'room1', name: 'Test', type: 'private' } as any}
+                messages={[]}
+                session={{ user: { id: 'user1' } } as any}
+                onSendMessage={vi.fn()}
+                onBack={onBack}
+                currentUser={{ id: 'user1', username: 'me' } as any}
+                isLoadingMessages={false}
+                isLoadingMoreMessages={false}
+                hasMoreMessages={false}
+                userPresence={new Map()}
+            />
+        );
+
+        await act(async () => { await new Promise(r => setTimeout(r, 50)); });
+        unmount();
+
+        expect(historyBackSpy).not.toHaveBeenCalled();
+    });
+});
+
+// --- Original ChatWindow Component Tests ---
+
 describe('ChatWindow Bileşeni', () => {
     const mockSession: any = { user: { id: 'user1' } };
     const mockRoom: any = {
@@ -74,14 +178,14 @@ describe('ChatWindow Bileşeni', () => {
         {
             id: '1',
             content: 'Merhaba dünya',
-            user_id: 'user1', // Me
+            user_id: 'user1',
             sender: 'me',
             created_at: new Date().toISOString()
         },
         {
             id: '2',
             content: 'Selam!',
-            user_id: 'user2', // Other
+            user_id: 'user2',
             user: { username: 'OtherUser' },
             sender: 'other',
             created_at: new Date().toISOString()
@@ -104,15 +208,8 @@ describe('ChatWindow Bileşeni', () => {
             />
         );
 
-        // Mesajların ekranda olduğunu kontrol et
-        const myMessage = screen.getByText('Merhaba dünya');
-        const otherMessage = screen.getByText('Selam!');
-
-        expect(myMessage).toBeInTheDocument();
-        expect(otherMessage).toBeInTheDocument();
-
-        // Diğer kullanıcının isminin göründüğünü kontrol et
-        // (Grup sohbetlerinde veya karşı taraf mesajlarında isim görünür)
+        expect(screen.getByText('Merhaba dünya')).toBeInTheDocument();
+        expect(screen.getByText('Selam!')).toBeInTheDocument();
         expect(screen.getByText('OtherUser')).toBeInTheDocument();
     });
 
