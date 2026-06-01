@@ -79,7 +79,7 @@ jobs:
         run: npm ci
 
       - name: Run Tests with Coverage
-        run: npm run test:coverage -- --runInBand
+        run: npm run test:coverage -- --pool=single
         env:
           NODE_ENV: test
           FRONTEND_URL: http://localhost:5173
