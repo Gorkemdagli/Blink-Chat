@@ -129,7 +129,8 @@ export const runCleanup = async () => {
 
             const now = new Date();
             const olderThan15Days = files.filter(file => {
-                const createdAt = new Date(file.created_at);
+                const createdAt = file.created_at ? new Date(file.created_at) : null;
+                if (!createdAt) return false;
                 const isOld = (now.getTime() - createdAt.getTime()) > (15 * 24 * 60 * 60 * 1000);
                 return isOld && file.id;
             });
