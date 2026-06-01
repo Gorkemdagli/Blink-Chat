@@ -25,14 +25,12 @@ const ensureHistoryEntry = (action: 'init' | 'update' | 'close') => {
   if (action === 'init') {
     window.history.pushState(null, '', window.location.pathname + window.location.search + '#chat');
   } else if (action === 'update') {
-    // Room changed — replace existing entry instead of stacking
     window.history.replaceState(null, '', window.location.pathname + window.location.search + '#chat');
   } else {
-    // close: remove #chat from URL
     window.history.replaceState(null, '', window.location.pathname + window.location.search);
   }
 };
-=======
+
 // History sentinel: counts active #chat pushState entries.
 // Increment on mount/room-change (pushState). Decrement on controlled close (replaceState).
 // Cleanup does NOT touch this — unmount via popstate is handled separately.
@@ -173,7 +171,6 @@ export default function ChatWindow({
     }
 
     markRead()
-    // Listen for visibility change to mark read when user comes back
     document.addEventListener('visibilitychange', markRead)
 
     return () => {
@@ -190,7 +187,6 @@ export default function ChatWindow({
   useEffect(() => {
     if (!selectedRoom || messages.length === 0) return
 
-    // Debounce: Only emit once every 2 seconds max
     const now = Date.now()
     if (now - lastMarkReadRef.current < 2000) return
 
@@ -207,16 +203,13 @@ export default function ChatWindow({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value)
 
-    // Emit typing event
     const socket = getSocket(session.access_token)
     if (socket && selectedRoom) {
       const username = currentUser?.username || session.user.email?.split('@')[0] || 'Unknown';
       socket.emit('typing', { roomId: selectedRoom.id, userId: session.user.id, username })
 
-      // Clear existing timeout
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
 
-      // Set new timeout to stop typing
       typingTimeoutRef.current = setTimeout(() => {
         socket.emit('stop_typing', { roomId: selectedRoom.id, userId: session.user.id })
       }, 2000)
@@ -231,7 +224,6 @@ export default function ChatWindow({
 
     const handleResizeOrImageLoad = () => {
       checkMobile()
-      // Eğer kullanıcı zaten en alttaysa veya benden bir mesaj geldiyse scroll'u koru
       if (scrollRef.current) {
         const container = scrollRef.current
         const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 200
@@ -257,25 +249,15 @@ export default function ChatWindow({
     onBackRef.current = onBack;
   }, [onBack]);
 
-
-  // Controlled chat close: removes #chat via replaceState,
-  // then calls parent's onBack to unmount this component.
-  const closeChatWithHistory = () => {
-    ensureHistoryEntry('close');
-
   // Controlled chat close: removes #chat via replaceState, decrements sentinel,
   // then calls parent's onBack to unmount this component.
-  // Called by both UI back button and popstate when sentinel === 1.
   const closeChatWithHistory = () => {
     if (chatHistorySentinel < 0) {
-      // Safety guard: sentinel negative means already closed/depleted, just close
       onBackRef.current();
       return;
     }
-    // Remove #chat from URL without triggering popstate
     window.history.replaceState(null, '', window.location.pathname + window.location.search);
     chatHistorySentinel--;
-
     onBackRef.current();
   };
 
@@ -283,58 +265,34 @@ export default function ChatWindow({
   useEffect(() => {
     if (!selectedRoom?.id) return;
 
-
-    // init: push new #chat entry only on first mount (not on stable re-renders)
     if (!hasInitializedRef.current) {
       hasInitializedRef.current = true;
       ensureHistoryEntry('init');
+      chatHistorySentinel++;
     }
 
     const handlePopState = () => {
-      // Browser back triggered — close chat
-      closeChatWithHistory();
-
-    // Her oda değişikliğinde pushState yap — sentinel'i her zaman artır
-    window.history.pushState(null, '', window.location.pathname + window.location.search + '#chat');
-    chatHistorySentinel++;
-
-    const handlePopState = () => {
-      // Donanım geri tuşu veya swipe back — browser zaten history'e back yaptı
-      // Sentinel > 1 → başka #chat entry var, sadece azalt, chat açık kalsın
-      // Sentinel === 1 → son #chat entry tüketildi, chat'i kapat
       if (chatHistorySentinel > 1) {
         chatHistorySentinel--;
       } else if (chatHistorySentinel === 1) {
         chatHistorySentinel--;
         closeChatWithHistory();
       }
-      // sentinel < 1: zaten 0 veya negatif, bir şey yapma
-
     };
 
     window.addEventListener('popstate', handlePopState);
 
     return () => {
       window.removeEventListener('popstate', handlePopState);
-
     };
   }, [selectedRoom?.id]);
 
-  // Sync #chat entry on room change — replace existing entry, don't stack
+  // Sync #chat entry on room change
   useEffect(() => {
     if (!selectedRoom?.id) return;
     ensureHistoryEntry('update');
   }, [selectedRoom?.id]);
 
-      // NOT: cleanup'ta sentinel AZALTMIYORUZ.
-      // Unmount popstate üzerinden zaten handle ediliyor (sentinel === 1 durumu).
-      // currentRoom null olmadan ChatWindow unmount olmaz — tüm unmount'lar
-      // closeChatWithHistory üzerinden sentinel-- ile birlikte gerçekleşir.
-    };
-  }, [selectedRoom?.id]);
-
-  // UI içerisindeki geri butonu — her zaman chat'i kapatır (controlled close)
-  // replaceState kullanır (popstate tetiklemez), sentinel azaltılır
   const handleHardwareSafeBack = () => {
     closeChatWithHistory();
   };
@@ -366,7 +324,6 @@ export default function ChatWindow({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
-        // Smile butonuna tıklanmadıysa kapat
         if (!(event.target as HTMLElement).closest('button[data-emoji-button]')) {
           setShowEmojiPicker(false)
         }
@@ -383,7 +340,6 @@ export default function ChatWindow({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (attachMenuRef.current && !attachMenuRef.current.contains(event.target as Node)) {
-        // Ataş butonuna tıklanmadıysa kapat
         if (!(event.target as HTMLElement).closest('button[data-attach-button]')) {
           setShowAttachMenu(false)
         }
@@ -403,7 +359,6 @@ export default function ChatWindow({
       previousRoomIdRef.current = selectedRoom?.id
       setShowEmojiPicker(false)
 
-      // Oda değiştiğinde scroll'u anında en alta al (birden fazla deneme ile)
       const instantScroll = () => {
         if (scrollRef.current) {
           scrollRef.current.scrollTop = scrollRef.current.scrollHeight
@@ -419,7 +374,6 @@ export default function ChatWindow({
     }
   }, [selectedRoom?.id])
 
-  // Track the last message ID to distinguish between new messages and historical ones
   const lastMessageIdRef = useRef<string | null>(null)
 
   // Scroll to bottom: İlk yüklemede ve yeni mesajlarda
@@ -428,7 +382,6 @@ export default function ChatWindow({
 
     const container = scrollRef.current
 
-    // Loading bittiğinde ve mesajlar varsa en alta git
     if (isInitialLoadRef.current && !isLoadingMessages) {
       if (messages.length > 0) {
         isInitialLoadRef.current = false
@@ -450,17 +403,14 @@ export default function ChatWindow({
       return
     }
 
-    // Yeni mesajlar geldiğinde (Scroll yönetimi)
     if (messages.length > 0 && !isLoadingMessages && !isInitialLoadRef.current && !isLoadingMoreMessages) {
       const lastMessage = messages[messages.length - 1]
       const currentLastId = lastMessage?.id
 
-      // Sadece gerçekten YENİ bir mesaj geldiyse (en sona eklenen id değiştiyse) işlem yap
       if (currentLastId !== lastMessageIdRef.current) {
         const isMyMessage = lastMessage?.user_id === session?.user?.id || lastMessage?.sender === 'me'
         const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150
 
-        // Eğer mesaj benden geldiyse VEYA kullanıcı zaten en alttaysa aşağı kaydır
         if (isMyMessage || isAtBottom) {
           setTimeout(() => {
             if (messagesEndRef.current) {
@@ -499,7 +449,6 @@ export default function ChatWindow({
         })
       }
 
-      // Scroll to bottom button visibility logic: Show if more than 150px from bottom
       const isUp = container.scrollHeight - container.scrollTop - container.clientHeight > 150
       setShowScrollButton(isUp)
     }
@@ -515,14 +464,13 @@ export default function ChatWindow({
     const start = container.scrollTop
     const end = container.scrollHeight - container.clientHeight
     const change = end - start
-    const duration = 800 // Slower scroll duration in ms
+    const duration = 800
     let startTime: number | null = null
 
     const animateScroll = (currentTime: number) => {
       if (!startTime) startTime = currentTime
       const progress = currentTime - startTime
 
-      // Ease-in-out function for a more organic feel
       const easeInOutQuad = (t: number, b: number, c: number, d: number) => {
         t /= d / 2
         if (t < 1) return (c / 2) * t * t + b
@@ -536,7 +484,7 @@ export default function ChatWindow({
       if (progress < duration) {
         requestAnimationFrame(animateScroll)
       } else {
-        container.scrollTop = end // Ensure exact end
+        container.scrollTop = end
       }
     }
 
@@ -547,7 +495,7 @@ export default function ChatWindow({
     const file = e.target.files?.[0]
     if (!file) return
 
-    if (file.size > 25 * 1024 * 1024) { // 25MB limit
+    if (file.size > 25 * 1024 * 1024) {
       showToast?.('Dosya boyutu 25MB\'dan büyük olamaz!', 'error')
       return
     }
@@ -577,7 +525,7 @@ export default function ChatWindow({
     if (files && files.length > 0) {
       const file = files[0]
 
-      if (file.size > 25 * 1024 * 1024) { // 25MB limit
+      if (file.size > 25 * 1024 * 1024) {
         showToast?.('Dosya boyutu 25MB\'dan büyük olamaz!', 'error')
         return
       }
@@ -597,7 +545,7 @@ export default function ChatWindow({
         .upload(filePath, file, {
           cacheControl: '3600',
           upsert: false,
-          contentType: file.type // Explicitly set content type to ensure correct handling
+          contentType: file.type
         })
 
       if (error) throw error
@@ -629,7 +577,6 @@ export default function ChatWindow({
           return
         }
 
-        // Determine message type
         const fileExt = (selectedFile.name || '').split('.').pop()?.toLowerCase() || ''
         const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico']
         const isImage = selectedFile.type?.startsWith('image/') || imageExtensions.includes(fileExt)
@@ -647,7 +594,6 @@ export default function ChatWindow({
     setSelectedFile(null)
     setIsUploading(false)
 
-    // Mesaj gönderildikten sonra scroll'u en alta al
     setTimeout(() => {
       if (messagesEndRef.current) {
         messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
@@ -946,7 +892,6 @@ export default function ChatWindow({
           }}
           onInviteMembers={async (userIds) => {
             try {
-              // RPC'yi her kullanıcı için ayrı ayrı çağırıyoruz (RPC tekil davet için tasarlandı)
               const socket = getSocket(session.access_token)
               const results = await Promise.all(
                 userIds.map(async id => {
@@ -961,7 +906,6 @@ export default function ChatWindow({
                 })
               )
 
-              // Hata kontrolü
               const firstError = results.find(r => r.error)?.error
               if (firstError) throw firstError
 
