@@ -1,6 +1,7 @@
 // Set NODE_ENV to test for all test runs
 process.env.NODE_ENV = 'test';
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || 'https://mock.supabase.co';
+process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'mock-service-role-key';
 
 // ─── Chainable Query Builder (per-call isolation) ───
 function createChainBuilder() {
@@ -82,26 +83,3 @@ jest.mock('../supabaseClient', () => ({
     __esModule: true,
     default: mockSupabaseClient,
 }));
-
-// Mock Redis to avoid connection errors during tests
-jest.mock('../redisClient', () => {
-    const mockRedis = {
-        get: jest.fn().mockResolvedValue(null),
-        set: jest.fn().mockResolvedValue('OK'),
-        publish: jest.fn().mockResolvedValue(0),
-        subscribe: jest.fn().mockResolvedValue(null),
-        psubscribe: jest.fn().mockResolvedValue(null),
-        unsubscribe: jest.fn().mockResolvedValue(null),
-        punsubscribe: jest.fn().mockResolvedValue(null),
-        duplicate: jest.fn().mockImplementation(() => ({
-            ...mockRedis,
-            on: jest.fn(),
-        })),
-        on: jest.fn(),
-    };
-
-    return {
-        __esModule: true,
-        default: mockRedis,
-    };
-});

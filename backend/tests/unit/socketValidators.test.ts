@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeAll } from 'vitest';
 import { MessageDataSchema, MarkReadSchema, TypingSchema, StopTypingSchema } from '../../validators/socketValidators';
 
 describe('Socket Validators', () => {

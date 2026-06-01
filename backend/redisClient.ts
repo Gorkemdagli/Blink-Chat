@@ -38,6 +38,36 @@ if (isTLS) {
 
 const redis = new Redis(redisOptions);
 
+// ─── Lua Scripts ───
+
+// Atomic message rate limit: SET NX PX, returns 1 if allowed, 0 if rate limited
+redis.defineCommand('rateLimitMsg', {
+  numberOfKeys: 1,
+  lua: `
+local key = KEYS[1]
+local window = ARGV[1]
+if redis.call('SET', key, '1', 'NX', 'PX', window) then
+  return 1
+else
+  return 0
+end
+  `
+});
+
+// Safe connection decrement: DECR then DEL if <= 0, returns remaining count
+redis.defineCommand('decrementConnections', {
+  numberOfKeys: 1,
+  lua: `
+local key = KEYS[1]
+local val = redis.call('DECR', key)
+if val <= 0 then
+  redis.call('DEL', key)
+  return 0
+end
+return val
+  `
+});
+
 redis.on('connect', () => {
     logger.info(`✅ Redis bağlantısı kuruldu: ${redisHost}:${redisPort} (TLS: ${isTLS})`);
 });
