@@ -157,7 +157,7 @@ describe('ChatWindow History Sentinel', () => {
     it('StrictMode double-mount: back closes chat on first press', async () => {
         const onBack = vi.fn();
 
-        const { unmount, rerender } = render(
+        const { unmount } = render(
             <ChatWindow
                 selectedRoom={{ id: 'room1', name: 'Test', type: 'private' } as any}
                 messages={[]}
