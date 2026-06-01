@@ -1,23 +1,27 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import type { SpyInstance } from 'vitest';
 import { runCleanup, extractStoragePath } from '../../utils/cronJobs';
 import supabase from '../../supabaseClient';
 
-jest.mock('../../supabaseClient', () => ({
-    from: jest.fn(),
-    storage: {
-        from: jest.fn(),
+vi.mock('../../supabaseClient', () => ({
+    default: {
+        from: vi.fn(),
+        storage: {
+            from: vi.fn(),
+        },
     },
 }));
 
-jest.mock('node-cron', () => ({
-    schedule: jest.fn(),
+vi.mock('node-cron', () => ({
+    schedule: vi.fn(),
 }));
 
 // ─── extractStoragePath Unit Tests ───────────────────────────────────────────
 describe('extractStoragePath — Path Traversal Guard', () => {
-    let consoleErrorSpy: jest.SpyInstance;
+    let consoleErrorSpy: SpyInstance;
 
     beforeEach(() => {
-        consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
+        consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
     });
 
     afterEach(() => {
@@ -96,13 +100,13 @@ describe('extractStoragePath — Path Traversal Guard', () => {
 
 // ─── runCleanup Integration Tests ────────────────────────────────────────────
 describe('Cron Jobs Cleanup', () => {
-    let consoleLogSpy: jest.SpyInstance;
-    let consoleErrorSpy: jest.SpyInstance;
+    let consoleLogSpy: SpyInstance;
+    let consoleErrorSpy: SpyInstance;
 
     beforeEach(() => {
-        jest.clearAllMocks();
-        consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
-        consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
+        vi.clearAllMocks();
+        consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => { });
+        consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
     });
 
     afterEach(() => {
@@ -111,17 +115,17 @@ describe('Cron Jobs Cleanup', () => {
     });
 
     it('should return early if no expired messages', async () => {
-        (supabase.from as jest.Mock).mockReturnValueOnce({
-            select: jest.fn().mockReturnThis(),
-            not: jest.fn().mockReturnThis(),
-            lt: jest.fn().mockResolvedValueOnce({
+        (supabase.from as Mock).mockReturnValueOnce({
+            select: vi.fn().mockReturnThis(),
+            not: vi.fn().mockReturnThis(),
+            lt: vi.fn().mockResolvedValueOnce({
                 data: [],
                 error: null
             })
         });
 
-        (supabase.storage.from as jest.Mock).mockReturnValue({
-            list: jest.fn().mockResolvedValue({
+        (supabase.storage.from as Mock).mockReturnValue({
+            list: vi.fn().mockResolvedValue({
                 data: [],
                 error: null
             })
@@ -133,12 +137,12 @@ describe('Cron Jobs Cleanup', () => {
     });
 
     it('should delete only safe paths, skip traversal file_urls', async () => {
-        const mockRemove = jest.fn().mockResolvedValue({ error: null });
+        const mockRemove = vi.fn().mockResolvedValue({ error: null });
 
-        (supabase.from as jest.Mock).mockReturnValueOnce({
-            select: jest.fn().mockReturnThis(),
-            not: jest.fn().mockReturnThis(),
-            lt: jest.fn().mockResolvedValueOnce({
+        (supabase.from as Mock).mockReturnValueOnce({
+            select: vi.fn().mockReturnThis(),
+            not: vi.fn().mockReturnThis(),
+            lt: vi.fn().mockResolvedValueOnce({
                 data: [
                     // Safe URL — should be deleted
                     { id: '1', file_url: 'https://proj.supabase.co/storage/v1/object/public/chat-files/safe-file.png' },
@@ -151,14 +155,14 @@ describe('Cron Jobs Cleanup', () => {
             })
         });
 
-        (supabase.storage.from as jest.Mock).mockReturnValue({
+        (supabase.storage.from as Mock).mockReturnValue({
             remove: mockRemove,
-            list: jest.fn().mockResolvedValue({ data: [], error: null })
+            list: vi.fn().mockResolvedValue({ data: [], error: null })
         });
 
-        (supabase.from as jest.Mock).mockReturnValueOnce({
-            update: jest.fn().mockReturnThis(),
-            in: jest.fn().mockResolvedValueOnce({ error: null })
+        (supabase.from as Mock).mockReturnValueOnce({
+            update: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValueOnce({ error: null })
         });
 
         await runCleanup();
@@ -173,23 +177,23 @@ describe('Cron Jobs Cleanup', () => {
     });
 
     it('should handle deletion of expired messages with files', async () => {
-        (supabase.from as jest.Mock).mockReturnValueOnce({
-            select: jest.fn().mockReturnThis(),
-            not: jest.fn().mockReturnThis(),
-            lt: jest.fn().mockResolvedValueOnce({
+        (supabase.from as Mock).mockReturnValueOnce({
+            select: vi.fn().mockReturnThis(),
+            not: vi.fn().mockReturnThis(),
+            lt: vi.fn().mockResolvedValueOnce({
                 data: [{ id: '1', file_url: 'https://proj.supabase.co/storage/v1/object/public/chat-files/file1.png' }],
                 error: null
             })
         });
 
-        (supabase.storage.from as jest.Mock).mockReturnValue({
-            remove: jest.fn().mockResolvedValue({ error: null }),
-            list: jest.fn().mockResolvedValue({ data: [], error: null })
+        (supabase.storage.from as Mock).mockReturnValue({
+            remove: vi.fn().mockResolvedValue({ error: null }),
+            list: vi.fn().mockResolvedValue({ data: [], error: null })
         });
 
-        (supabase.from as jest.Mock).mockReturnValueOnce({
-            update: jest.fn().mockReturnThis(),
-            in: jest.fn().mockResolvedValueOnce({ error: null })
+        (supabase.from as Mock).mockReturnValueOnce({
+            update: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValueOnce({ error: null })
         });
 
         await runCleanup();
@@ -198,3 +202,5 @@ describe('Cron Jobs Cleanup', () => {
         expect(supabase.from).toHaveBeenCalledWith('messages');
     });
 });
+
+type Mock = ReturnType<typeof vi.fn>;

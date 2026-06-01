@@ -1,13 +1,18 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Server, Socket } from 'socket.io';
 import { MessageController } from '../../controllers/messageController';
 import { MessageService } from '../../services/messageService';
 
-jest.mock('../../services/messageService');
-jest.mock('../../config/logger', () => ({
-    error: jest.fn(),
-    debug: jest.fn(),
-    warn: jest.fn(),
-    info: jest.fn()
+vi.mock('../../services/messageService');
+vi.mock('../../config/logger', () => ({
+    __esModule: true,
+    default: {
+        error: vi.fn(),
+        debug: vi.fn(),
+        warn: vi.fn(),
+        info: vi.fn(),
+        stream: { write: vi.fn() }
+    }
 }));
 
 describe('MessageController', () => {
@@ -15,16 +20,16 @@ describe('MessageController', () => {
     let mockSocket: Partial<Socket>;
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
 
         mockIo = {
-            to: jest.fn().mockReturnThis(),
-            emit: jest.fn(),
+            to: vi.fn().mockReturnThis(),
+            emit: vi.fn(),
         };
 
         mockSocket = {
-            to: jest.fn().mockReturnThis(),
-            emit: jest.fn(),
+            to: vi.fn().mockReturnThis(),
+            emit: vi.fn(),
         };
     });
 
@@ -32,7 +37,7 @@ describe('MessageController', () => {
         it('should validate and save message, then broadcast to room and globally', async () => {
             const validData = { roomId: 'room1', userId: 'user1', content: 'msg' };
             const savedMessage = { ...validData, id: 'msg1', user: { username: 'test' } };
-            (MessageService.saveMessage as jest.Mock).mockResolvedValueOnce(savedMessage);
+            (MessageService.saveMessage as vi.Mock).mockResolvedValueOnce(savedMessage);
 
             await MessageController.handleSendMessage(mockIo as Server, mockSocket as Socket, validData);
 
@@ -54,7 +59,7 @@ describe('MessageController', () => {
     describe('handleMarkRead', () => {
         it('should call service and emit messages_read', async () => {
             const validData = { roomId: 'room1', userId: 'user1' };
-            (MessageService.markMessagesAsRead as jest.Mock).mockResolvedValueOnce([]);
+            (MessageService.markMessagesAsRead as vi.Mock).mockResolvedValueOnce([]);
 
             await MessageController.handleMarkRead(mockIo as Server, mockSocket as Socket, validData);
 
