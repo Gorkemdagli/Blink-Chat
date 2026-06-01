@@ -1,3 +1,4 @@
+/// <reference types="vitest/globals" />
 // Set NODE_ENV to test for all test runs
 process.env.NODE_ENV = 'test';
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || 'https://mock.supabase.co';
@@ -12,21 +13,21 @@ function createChainBuilder() {
         _filterValue: null,
     };
 
-    chain.select = jest.fn(() => chain);
-    chain.eq = jest.fn((field: string, value: any) => {
+    chain.select = vi.fn(() => chain);
+    chain.eq = vi.fn((field: string, value: any) => {
         chain._filterField = field;
         chain._filterValue = value;
         return chain;
     });
-    chain.neq = jest.fn(() => chain);
-    chain.not = jest.fn(() => chain);
-    chain.update = jest.fn(() => chain);
-    chain.insert = jest.fn((data: any) => {
+    chain.neq = vi.fn(() => chain);
+    chain.not = vi.fn(() => chain);
+    chain.update = vi.fn(() => chain);
+    chain.insert = vi.fn((data: any) => {
         chain._insertData = data;
         return chain;
     });
-    chain.maybeSingle = jest.fn().mockResolvedValue({ data: { user_id: 'test-user-id' }, error: null });
-    chain.single = jest.fn(() => {
+    chain.maybeSingle = vi.fn().mockResolvedValue({ data: { user_id: 'test-user-id' }, error: null });
+    chain.single = vi.fn(() => {
         return Promise.resolve({
             data: {
                 id: chain._filterValue || 'test-user-id',
@@ -64,22 +65,22 @@ function createChainBuilder() {
 
 // ─── Root mock (NO `then` — prevents thenable resolution) ───
 const mockSupabaseClient = {
-    from: jest.fn((table: string) => {
+    from: vi.fn((table: string) => {
         const chain = createChainBuilder();
         chain._table = table;
         return chain;
     }),
     auth: {
-        getUser: jest.fn().mockResolvedValue({
+        getUser: vi.fn().mockResolvedValue({
             data: { user: { id: 'test-user-id', email: 'test@example.com' } },
             error: null
         }),
-        signInWithPassword: jest.fn().mockResolvedValue({ data: { session: { access_token: 'mock-token' } }, error: null }),
-        signOut: jest.fn().mockResolvedValue({ error: null }),
+        signInWithPassword: vi.fn().mockResolvedValue({ data: { session: { access_token: 'mock-token' } }, error: null }),
+        signOut: vi.fn().mockResolvedValue({ error: null }),
     },
 };
 
-jest.mock('../supabaseClient', () => ({
+vi.mock('../supabaseClient', () => ({
     __esModule: true,
     default: mockSupabaseClient,
 }));
