@@ -16,7 +16,15 @@ export interface MessageData {
 export class MessageService {
     static async saveMessage(data: MessageData) {
         const { roomId, userId, content, fileUrl, messageType = 'text', fileName, fileSize } = data;
-        const sanitizedContent = xss(content);
+        // xss default options already escape <, >, &, ", '. The flags below are
+        // defensive intent-revealing: stripIgnoreTag drops inner text of unknown
+        // tags (e.g. <unknown>x</unknown> → ''); allowCommentTag keeps HTML
+        // comments out. Zod (MessageDataSchema.content) guarantees content is
+        // free of null bytes and C0 controls before reaching here.
+        const sanitizedContent = xss(content, {
+            stripIgnoreTag: true,
+            allowCommentTag: false,
+        });
 
         const { data: messageData, error } = await supabase
             .from('messages')

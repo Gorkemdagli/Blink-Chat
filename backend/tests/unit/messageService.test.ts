@@ -67,7 +67,10 @@ describe('MessageService', () => {
 
             const result = await MessageService.saveMessage(data);
 
-            expect(xss).toHaveBeenCalledWith('test content');
+            expect(xss).toHaveBeenCalledWith('test content', {
+                stripIgnoreTag: true,
+                allowCommentTag: false,
+            });
             expect(result.content).toBe('sanitized_test content');
             expect(result.user).toEqual({ id: 'user1', username: 'testuser' });
             expect(redis.set).toHaveBeenCalled();
