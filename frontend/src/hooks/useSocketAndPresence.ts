@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { Session } from '@supabase/supabase-js'
 import { supabase } from '../supabaseClient'
 import { getSocket } from '../socket'
-import { Room, Message, UnreadCounts, Friend } from '../types'
+import { Room, Message, UnreadCounts, Friend, WebSocketMessage } from '../types'
 import useChatState from './useChatState'
 import useChatData from './useChatData'
 
@@ -49,7 +49,7 @@ export function useSocketAndPresence(session: Session, state: ChatState, dataFun
         // Global Socket.IO listener
         const socket = getSocket(session.access_token)
 
-        const handleUnifiedNewMessage = (messageWithUser: any) => {
+        const handleUnifiedNewMessage = (messageWithUser: WebSocketMessage) => {
             // 1. Sidebar güncelleme (son mesaj)
             setLastMessages((prev: { [key: string]: Message }) => ({
                 ...prev,
@@ -59,7 +59,7 @@ export function useSocketAndPresence(session: Session, state: ChatState, dataFun
                     message_type: messageWithUser.message_type,
                     user_id: messageWithUser.user_id,
                     created_at: messageWithUser.created_at,
-                    user: messageWithUser.user || messageWithUser.userData,
+                    user: messageWithUser.user,
                     room_id: messageWithUser.room_id
                 } as Message
             }))
@@ -102,203 +102,190 @@ export function useSocketAndPresence(session: Session, state: ChatState, dataFun
         let globalChannel: any = null
         let presenceChannel: any = null
         let heartbeatInterval: any = null
-        let setupTimeout: any = null
 
-        // Data fetch'lerin önce tamamlanması için realtime subscription'ları geciktir
-        // Bu, connection pool'un data istekleri için kullanılabilir olmasını sağlar
-        setupTimeout = setTimeout(() => {
-            // Global Supabase channel
-            globalChannel = supabase
-                .channel('global-updates', {
-                    config: {
-                        broadcast: { self: false },
-                        presence: { key: '' }
-                    }
-                })
-                .on('postgres_changes', {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'room_deletions',
-                    filter: `user_id=eq.${session.user.id}`
-                }, (payload: any) => {
-                    const deletedRoomId = payload.new.room_id
-                    setRooms((prevRooms: Room[]) => prevRooms.filter(r => r.id !== deletedRoomId))
-                    setCurrentRoom((prevRoom: Room | null) => prevRoom?.id === deletedRoomId ? null : prevRoom)
-                })
-                .on('postgres_changes', {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'room_invitations',
-                    filter: `invitee_id=eq.${session.user.id}`
-                }, () => fetchPendingInvitations())
-                .on('postgres_changes', {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'room_invitations',
-                    filter: `invitee_id=eq.${session.user.id}`
-                }, () => fetchPendingInvitations())
-                .on('postgres_changes', {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'friend_requests',
-                    filter: `receiver_id=eq.${session.user.id}`
-                }, () => fetchFriendRequests())
-                .on('postgres_changes', {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'friend_requests',
-                    filter: `receiver_id=eq.${session.user.id}`
-                }, () => fetchFriendRequests())
-                .on('postgres_changes', {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'friends',
-                    filter: `user_id=eq.${session.user.id}`
-                }, () => fetchFriends())
-                .on('postgres_changes', {
-                    event: 'DELETE',
-                    schema: 'public',
-                    table: 'friends',
-                    filter: `user_id=eq.${session.user.id}`
-                }, () => fetchFriends())
-                .on('postgres_changes', {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'room_members',
-                    filter: `user_id=eq.${session.user.id}`
-                }, () => debouncedFetchRooms())
-                .on('postgres_changes', {
-                    event: 'DELETE',
-                    schema: 'public',
-                    table: 'room_members',
-                    filter: `user_id=eq.${session.user.id}`
-                }, (payload: any) => {
-                    debouncedFetchRooms()
-                    if (currentRoomRef.current?.id === payload.old.room_id) {
-                        setCurrentRoom(null)
-                    }
-                })
-                .subscribe()
-
-            // Presence channel
-            presenceChannel = supabase.channel('online-users', {
+        // Global Supabase channel
+        globalChannel = supabase
+            .channel('global-updates', {
                 config: {
-                    broadcast: { self: true },
-                    presence: { key: session.user.id }
+                    broadcast: { self: false },
+                    presence: { key: '' }
                 }
             })
-
-            const updatePresence = (isVisible = true) => {
-                if (!presenceSubscribedRef.current) return
-
-                if (isVisible) {
-                    presenceChannel.track({
-                        user_id: session.user.id,
-                        online: true,
-                        last_seen: new Date().toISOString(),
-                        status: 'online'
-                    })
-                } else {
-                    presenceChannel.untrack()
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'room_deletions',
+                filter: `user_id=eq.${session.user.id}`
+            }, (payload: any) => {
+                const deletedRoomId = payload.new.room_id
+                setRooms((prevRooms: Room[]) => prevRooms.filter(r => r.id !== deletedRoomId))
+                setCurrentRoom((prevRoom: Room | null) => prevRoom?.id === deletedRoomId ? null : prevRoom)
+            })
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'room_invitations',
+                filter: `invitee_id=eq.${session.user.id}`
+            }, () => fetchPendingInvitations())
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'room_invitations',
+                filter: `invitee_id=eq.${session.user.id}`
+            }, () => fetchPendingInvitations())
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'friend_requests',
+                filter: `receiver_id=eq.${session.user.id}`
+            }, () => fetchFriendRequests())
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'friend_requests',
+                filter: `receiver_id=eq.${session.user.id}`
+            }, () => fetchFriendRequests())
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'friends',
+                filter: `user_id=eq.${session.user.id}`
+            }, () => fetchFriends())
+            .on('postgres_changes', {
+                event: 'DELETE',
+                schema: 'public',
+                table: 'friends',
+                filter: `user_id=eq.${session.user.id}`
+            }, () => fetchFriends())
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'room_members',
+                filter: `user_id=eq.${session.user.id}`
+            }, () => debouncedFetchRooms())
+            .on('postgres_changes', {
+                event: 'DELETE',
+                schema: 'public',
+                table: 'room_members',
+                filter: `user_id=eq.${session.user.id}`
+            }, (payload: any) => {
+                debouncedFetchRooms()
+                if (currentRoomRef.current?.id === payload.old.room_id) {
+                    setCurrentRoom(null)
                 }
-            }
+            })
+            .subscribe()
 
-            const handleVisibilityChange = () => {
-                updatePresence(document.visibilityState === 'visible')
+        // Presence channel
+        presenceChannel = supabase.channel('online-users', {
+            config: {
+                broadcast: { self: true },
+                presence: { key: session.user.id }
             }
+        })
 
-            const handleBeforeUnload = () => {
+        const updatePresence = (isVisible = true) => {
+            if (!presenceSubscribedRef.current) return
+
+            if (isVisible) {
+                presenceChannel.track({
+                    user_id: session.user.id,
+                    online: true,
+                    last_seen: new Date().toISOString(),
+                    status: 'online'
+                })
+            } else {
                 presenceChannel.untrack()
             }
+        }
 
-            document.addEventListener('visibilitychange', handleVisibilityChange)
-            window.addEventListener('beforeunload', handleBeforeUnload)
+        const handleVisibilityChange = () => {
+            updatePresence(document.visibilityState === 'visible')
+        }
 
-            heartbeatInterval = setInterval(() => {
-                if (document.visibilityState === 'visible') {
-                    updatePresence(true)
-                }
-            }, 10000)
+        const handleBeforeUnload = () => {
+            presenceChannel.untrack()
+        }
 
-            // Presence sync handler
-            const processPresenceState = (presenceState: any) => {
-                const onlineUsersSet = new Set<string>()
-                const presenceMap = new Map<string, { online: boolean; lastSeen: string }>()
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+        window.addEventListener('beforeunload', handleBeforeUnload)
 
-                if (presenceState && typeof presenceState === 'object') {
-                    Object.entries(presenceState).forEach(([key, presences]: [string, any]) => {
-                        const presencesArray = Array.isArray(presences) ? presences : [presences]
-                        presencesArray.forEach((presence: any) => {
-                            const userId = presence.user_id || key
-                            if (userId) {
-                                const isOnline = presence.online !== false
-                                const existing = presenceMap.get(userId)
+        heartbeatInterval = setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                updatePresence(true)
+            }
+        }, 10000)
 
-                                const finalOnlineStatus = isOnline || (existing?.online || false)
+        // Presence sync handler
+        const processPresenceState = (presenceState: any) => {
+            const onlineUsersSet = new Set<string>()
+            const presenceMap = new Map<string, { online: boolean; lastSeen: string }>()
 
-                                presenceMap.set(userId, {
-                                    online: finalOnlineStatus,
-                                    lastSeen: presence.last_seen || existing?.lastSeen || new Date().toISOString()
-                                })
+            if (presenceState && typeof presenceState === 'object') {
+                Object.entries(presenceState).forEach(([key, presences]: [string, any]) => {
+                    const presencesArray = Array.isArray(presences) ? presences : [presences]
+                    presencesArray.forEach((presence: any) => {
+                        const userId = presence.user_id || key
+                        if (userId) {
+                            const isOnline = presence.online !== false
+                            const existing = presenceMap.get(userId)
 
-                                if (finalOnlineStatus) {
-                                    onlineUsersSet.add(userId)
-                                }
+                            const finalOnlineStatus = isOnline || (existing?.online || false)
+
+                            presenceMap.set(userId, {
+                                online: finalOnlineStatus,
+                                lastSeen: presence.last_seen || existing?.lastSeen || new Date().toISOString()
+                            })
+
+                            if (finalOnlineStatus) {
+                                onlineUsersSet.add(userId)
                             }
-                        })
+                        }
                     })
-                }
-
-                setOnlineUsers(onlineUsersSet)
-                setUserPresence((prev: Map<string, { online: boolean; lastSeen: string }>) => {
-                    const newPresenceMap = new Map<string, { online: boolean; lastSeen: string }>()
-                    prev.forEach((value, key) => {
-                        newPresenceMap.set(key, {
-                            online: false,
-                            lastSeen: value.lastSeen || new Date().toISOString()
-                        })
-                    })
-
-                    presenceMap.forEach((value, key) => {
-                        newPresenceMap.set(key, value)
-                    })
-                    return newPresenceMap
                 })
             }
 
-            presenceChannel
-                .on('presence', { event: 'sync' }, () => {
-                    try {
-                        processPresenceState(presenceChannel.presenceState())
-                    } catch (error) {
-                        console.error('Error processing presence sync:', error)
-                    }
+            setOnlineUsers(onlineUsersSet)
+            setUserPresence((prev: Map<string, { online: boolean; lastSeen: string }>) => {
+                const newPresenceMap = new Map<string, { online: boolean; lastSeen: string }>()
+                prev.forEach((value, key) => {
+                    newPresenceMap.set(key, {
+                        online: false,
+                        lastSeen: value.lastSeen || new Date().toISOString()
+                    })
                 })
-                .on('presence', { event: 'join' }, () => {
-                    processPresenceState(presenceChannel.presenceState())
-                })
-                .on('presence', { event: 'leave' }, () => {
-                    processPresenceState(presenceChannel.presenceState())
-                })
-                .subscribe(async (status: string) => {
-                    if (status === 'SUBSCRIBED') {
-                        presenceSubscribedRef.current = true
-                        updatePresence(true)
 
-                        setTimeout(() => {
-                            const presenceState = presenceChannel.presenceState()
-                            if (presenceState && Object.keys(presenceState).length > 0) {
-                                processPresenceState(presenceState)
-                            }
-                        }, 500)
-                    }
+                presenceMap.forEach((value, key) => {
+                    newPresenceMap.set(key, value)
                 })
-        }, 500) // 500ms gecikme - data fetch'lerin önce tamamlanması için
+                return newPresenceMap
+            })
+        }
+
+        presenceChannel
+            .on('presence', { event: 'sync' }, () => {
+                try {
+                    processPresenceState(presenceChannel.presenceState())
+                } catch (error) {
+                    console.error('Error processing presence sync:', error)
+                }
+            })
+            .on('presence', { event: 'join' }, () => {
+                processPresenceState(presenceChannel.presenceState())
+            })
+            .on('presence', { event: 'leave' }, () => {
+                processPresenceState(presenceChannel.presenceState())
+            })
+            .subscribe(async (status: string) => {
+                if (status === 'SUBSCRIBED') {
+                    presenceSubscribedRef.current = true
+                    updatePresence(true)
+                }
+            })
 
         return () => {
             socket.off('newMessage', handleUnifiedNewMessage)
             socket.off('messages_read')
-            if (setupTimeout) clearTimeout(setupTimeout)
             if (globalChannel) supabase.removeChannel(globalChannel)
             if (heartbeatInterval) clearInterval(heartbeatInterval)
             if (presenceChannel) {
