@@ -20,6 +20,7 @@ interface MessageInputProps {
     emojiPickerRef: React.RefObject<HTMLDivElement | null>
     attachMenuRef: React.RefObject<HTMLDivElement | null>
     isMobile: boolean
+    darkMode?: boolean
 }
 
 export default function MessageInput({
@@ -38,14 +39,15 @@ export default function MessageInput({
     handleFileSelect,
     emojiPickerRef,
     attachMenuRef,
-    isMobile
+    isMobile,
+    darkMode
 }: MessageInputProps) {
     const formatBytes = (bytes: number | undefined | null, decimals = 1) => {
         if (!bytes) return '0 Bytes'
         const k = 1024
         const dm = decimals < 0 ? 0 : decimals
-        const sizes = ['Bayt', 'KB', 'MB', 'GB']
-        const i = Math.floor(Math.log(bytes) / Math.log(k))
+        const sizes = ['Bayt', 'KB', 'MB', 'GB', 'TB', 'PB']
+        const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1)
         return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]
     }
 
@@ -85,7 +87,7 @@ export default function MessageInput({
                     <Picker
                         data={data}
                         onEmojiSelect={handleEmojiSelect}
-                        theme={document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
+                        theme={darkMode ? 'dark' : 'light'}
                         locale="tr"
                         previewPosition="none"
                         skinTonePosition="search"

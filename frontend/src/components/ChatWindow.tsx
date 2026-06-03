@@ -85,7 +85,8 @@ export default function ChatWindow({
   friends = [],
   onProfileUpdate,
   onRoomUpdate,
-  showToast
+  showToast,
+  darkMode
 }: ChatWindowProps) {
   const [inputValue, setInputValue] = useState('')
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
@@ -100,6 +101,7 @@ export default function ChatWindow({
   const emojiPickerRef = useRef<HTMLDivElement>(null)
   const attachMenuRef = useRef<HTMLDivElement>(null)
   const hasInitializedRef = useRef(false);
+  const historyHandledForRoomRef = useRef<string | null>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isUploading, setIsUploading] = useState(false)
   const [showAttachMenu, setShowAttachMenu] = useState(false)
@@ -267,6 +269,7 @@ export default function ChatWindow({
 
     if (!hasInitializedRef.current) {
       hasInitializedRef.current = true;
+      historyHandledForRoomRef.current = selectedRoom.id;
       ensureHistoryEntry('init');
       chatHistorySentinel++;
     }
@@ -290,6 +293,8 @@ export default function ChatWindow({
   // Sync #chat entry on room change
   useEffect(() => {
     if (!selectedRoom?.id) return;
+    if (historyHandledForRoomRef.current === selectedRoom.id) return;
+    historyHandledForRoomRef.current = selectedRoom.id;
     ensureHistoryEntry('update');
   }, [selectedRoom?.id]);
 
@@ -737,6 +742,7 @@ export default function ChatWindow({
         emojiPickerRef={emojiPickerRef}
         attachMenuRef={attachMenuRef}
         isMobile={isMobile}
+        darkMode={darkMode}
       />
 
       {/* Confirmation Modals */}
