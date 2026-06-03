@@ -22,6 +22,7 @@ vi.mock('../../redisClient', () => ({
         del: vi.fn().mockResolvedValue(1),
         rateLimitMsg: vi.fn().mockResolvedValue(1),
         decrementConnections: vi.fn().mockResolvedValue(0),
+        eval: vi.fn().mockResolvedValue(0),
     }
 }));
 
