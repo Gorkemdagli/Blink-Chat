@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Session } from '@supabase/supabase-js'
 import { supabase } from '../supabaseClient'
-import { getSocket } from '../socket'
+import { getSocket, onConnectionStateChange } from '../socket'
 import { Room, Message, UnreadCounts, Friend, WebSocketMessage } from '../types'
 import useChatState from './useChatState'
 import useChatData from './useChatData'
@@ -70,6 +70,19 @@ export function useSocketAndPresence(session: Session, state: ChatState, dataFun
             if (messageWithUser.room_id === currentRoomId) {
                 setMessages((prev: Message[]) => {
                     if (prev.some(msg => msg.id === messageWithUser.id)) return prev
+                    // Replace optimistic temp message with server-confirmed one
+                    const tempIdx = prev.findIndex(msg =>
+                        msg.id.startsWith('temp-') &&
+                        msg.user_id === messageWithUser.user_id &&
+                        msg.content === messageWithUser.content
+                    )
+                    if (tempIdx !== -1) {
+                        const next = [...prev]
+                        next[tempIdx] = messageWithUser
+                        // Clean up ref so fetchMessages skip-wipe logic stays correct
+                        state.sentMessageIdsRef?.current?.delete(prev[tempIdx].id)
+                        return next
+                    }
                     return [...prev, messageWithUser]
                 })
             }
@@ -201,6 +214,33 @@ export function useSocketAndPresence(session: Session, state: ChatState, dataFun
 
         const handleVisibilityChange = () => {
             updatePresence(document.visibilityState === 'visible')
+            // Tab geri geldiğinde socket'i uyandır — odalar server'da düşmüş olabilir
+            if (document.visibilityState === 'visible') {
+                const s = getSocket(session.access_token)
+                if (!s.connected) {
+                    s.connect()
+                    // BağlantıConfirmed olana kadar bekle — aksi halde joinRoom emit boşa gider
+                    const off = onConnectionStateChange((st) => {
+                        if (st === 'connected') {
+                            off()
+                            state.rooms.forEach(room => {
+                                if (room.id && !room.is_provisional) {
+                                    getSocket()?.emit('joinRoom', room.id)
+                                }
+                            })
+                        }
+                    })
+                    // 15sn max bekle, sonra temizle
+                    setTimeout(off, 15000)
+                } else {
+                    // Zaten connected — direkt joinRoom (connect() çağırma, Socket.IO no-op eder)
+                    state.rooms.forEach(room => {
+                        if (room.id && !room.is_provisional) {
+                            s.emit('joinRoom', room.id)
+                        }
+                    })
+                }
+            }
         }
 
         const handleBeforeUnload = () => {
@@ -346,6 +386,36 @@ export function useSocketAndPresence(session: Session, state: ChatState, dataFun
             }
         })
     }, [state.rooms])
+
+    // Socket reconnect sonrası odaları yeniden join et
+    useEffect(() => {
+        const off = onConnectionStateChange((connState) => {
+            if (connState === 'connected' && state.rooms.length > 0) {
+                const socket = getSocket(session.access_token)
+                state.rooms.forEach(room => {
+                    if (room.id && !room.is_provisional) {
+                        socket.emit('joinRoom', room.id)
+                    }
+                })
+            }
+        })
+        return off
+    }, [session.access_token, state.rooms])
+
+    // Sayfa açıldığında socket zaten connected ise odaları join et (emitConnectionState çağrılarak tetiklenir)
+    useEffect(() => {
+        // Socket zaten connected durumundaysa hemen join et
+        if (state.rooms.length > 0) {
+            const socket = getSocket(session.access_token)
+            if (socket.connected) {
+                state.rooms.forEach(room => {
+                    if (room.id && !room.is_provisional) {
+                        socket.emit('joinRoom', room.id)
+                    }
+                })
+            }
+        }
+    }, [session.access_token, state.rooms])
 
     useEffect(() => {
         setRooms((prevRooms: Room[]) => prevRooms.map(room => {

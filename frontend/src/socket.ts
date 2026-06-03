@@ -30,22 +30,27 @@ export const onConnectionStateChange = (cb: (state: ConnectionState) => void): (
 /**
  * Mevcut access token'ı güncelle.
  * Socket bağlantısı zaten kuruluysa, yeni token ile yeniden bağlan.
+ * Token yenilemeleri debounce edilir (500ms) — birden fazla TOKEN_REFRESHED
+ * event'i sadece en sonuncuyu uygular, reconnect storm'u önler.
  */
+let tokenUpdateTimer: ReturnType<typeof setTimeout> | null = null
+
 export const setSocketToken = (token: string | null) => {
     currentToken = token
 
-    // Socket bağlantısı varsa auth objesini her zaman güncelle
-    if (socket) {
-        socket.auth = { token }
+    if (!socket) return
 
-        // Eğer token değiştiyse ve aktif bağlantı varsa, yeniden bağlan
-        if (token && socket.connected) {
-            socket.disconnect().connect()
-        } else if (token && !socket.connected) {
-            // Bağlı değilse fakat token geldiyse bağlanmayı dene
-            socket.connect()
+    const activeSocket = socket
+    activeSocket.auth = { token }
+
+    if (tokenUpdateTimer) clearTimeout(tokenUpdateTimer)
+    tokenUpdateTimer = setTimeout(() => {
+        if (activeSocket.connected) {
+            activeSocket.disconnect().connect()
+        } else if (token) {
+            activeSocket.connect()
         }
-    }
+    }, 500)
 }
 
 export const getSocket = (token?: string | null): Socket => {
@@ -62,8 +67,9 @@ export const getSocket = (token?: string | null): Socket => {
             isInitializing = true
             socket = io(import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000', {
                 reconnection: true,
-                reconnectionDelay: 1000,
-                reconnectionAttempts: 5,
+                reconnectionDelay: 2000,
+                reconnectionDelayMax: 15000,
+                reconnectionAttempts: Infinity,
                 autoConnect: true,
                 transports: ['websocket', 'polling'],
                 forceNew: false,

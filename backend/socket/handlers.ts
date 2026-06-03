@@ -43,45 +43,58 @@ export function setupSocketHandlers(io: Server) {
     io.on('connection', async (socket: Socket) => {
         const userId = socket.data.userId;
 
-        // ─── Connection Limit (before any other processing) ───
-        const maxConnections = parseInt(env.SOCKET_MAX_CONNECTIONS, 10);
+        // ─── Connection Limit (before any other processing) — atomic Lua ───
+        const maxConnections = parseInt(env.SOCKET_MAX_CONNECTIONS, 10) || 20;
         const connectionKey = `connections:${userId}`;
 
-        const currentCount = await redis.incr(connectionKey);
-        if (currentCount > maxConnections) {
-            await redis.decr(connectionKey); // rollback the incr
+        // Lua: INCR + check + optional rollback + EXPIRE, tek atomic işlem
+        const luaScript = `
+local key = KEYS[1]
+local limit = tonumber(ARGV[1])
+local current = redis.call('INCR', key)
+if current > limit then
+    redis.call('DECR', key)
+    return -1
+end
+redis.call('EXPIRE', key, 86400)
+return current
+`;
+        const result = await redis.eval(luaScript, 1, connectionKey, maxConnections) as number;
+        if (result < 0) {
             logger.warn(`Connection rejected: user ${userId} exceeded max connections (${maxConnections})`);
             socket.emit('error', `Maximum ${maxConnections} concurrent connections allowed.`);
             socket.disconnect(true);
             return;
         }
-        // Safety: set 24h expiry so orphaned keys eventually clear
-        await redis.expire(connectionKey, 86400);
 
         // Bağlantı anında güvenilir username'i Redis/DB'den çek
-        let username = 'Unknown';
-        try {
-            const cacheKey = `user:${userId}`;
-            const cached = await redis.get(cacheKey);
-            if (cached) {
-                username = JSON.parse(cached).username || 'Unknown';
-            } else {
-                const { data: dbUser } = await supabase
-                    .from('users')
-                    .select('id, username, email, user_code, avatar_url')
-                    .eq('id', userId)
-                    .single();
-                if (dbUser) {
-                    username = dbUser.username || 'Unknown';
-                    await redis.set(cacheKey, JSON.stringify(dbUser), 'EX', 3600);
-                }
-            }
-        } catch (err) {
-            logger.error('Failed to resolve username:', err);
-        }
-        socket.data.username = username;
+        // Async — connection'ı block etmesin, joinRoom hemen çalışsın
+        socket.data.username = 'Unknown'; // hemen ata, async resolve tamamlandığında güncellenir
 
-        logger.info(`User connected: ${socket.id} (uid: ${userId}, name: ${username}) | Total: ${io.engine.clientsCount}`);
+        const resolveUsername = async () => {
+            try {
+                const cacheKey = `user:${userId}`;
+                const cached = await redis.get(cacheKey);
+                if (cached) {
+                    socket.data.username = JSON.parse(cached).username || 'Unknown';
+                } else {
+                    const { data: dbUser } = await supabase
+                        .from('users')
+                        .select('id, username, email, user_code, avatar_url')
+                        .eq('id', userId)
+                        .single();
+                    if (dbUser) {
+                        socket.data.username = dbUser.username || 'Unknown';
+                        await redis.set(cacheKey, JSON.stringify(dbUser), 'EX', 3600);
+                    }
+                }
+            } catch (err) {
+                logger.error('Failed to resolve username:', err);
+            }
+        }
+        resolveUsername(); // fire-and-forget
+
+        logger.info(`User connected: ${socket.id} (uid: ${userId}) | Total: ${io.engine.clientsCount}`);
 
         // Her kullanıcıyı kendi ID'sine özel bir odaya ekle (Cross-instance bildirimler için)
         socket.join(`user:${userId}`);
@@ -134,7 +147,7 @@ export function setupSocketHandlers(io: Server) {
                 return;
             }
 
-            const rateLimitKey = `ratelimit:msg:${socket.id}`;
+            const rateLimitKey = `ratelimit:msg:${userId}`;
             const windowMs = parseInt(env.SOCKET_RATE_LIMIT_MS, 10);
 
             const allowed = await (redis as any).rateLimitMsg(rateLimitKey, windowMs);

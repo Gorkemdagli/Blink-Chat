@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 
 import { Session } from '@supabase/supabase-js'
 import { useChatState, useChatData, useChatActions, useSocketAndPresence } from '../hooks'
-import { onConnectionStateChange } from '../socket'
 import Toast from './Toast'
 import ConfirmModal from './ConfirmModal'
 
@@ -55,25 +54,6 @@ export default function Chat({ session, darkMode, onToggleDarkMode }: ChatProps)
     } = state
 
     const [roomToDelete, setRoomToDelete] = useState<string | null>(null)
-
-    // Socket bağlantı durumu — kopma/yeniden bağlanma banner'ı için.
-    // 2s eşiği: kısa kesintiler (örn. transport değişimi) kullanıcıyı rahatsız etmesin.
-    const [connectionState, setConnectionState] = useState<'connected' | 'disconnected' | 'connecting'>('connected')
-    const [showReconnectBanner, setShowReconnectBanner] = useState(false)
-
-    useEffect(() => {
-        const off = onConnectionStateChange((state) => {
-            setConnectionState(state)
-            if (state === 'connected') {
-                setShowReconnectBanner(false)
-            } else if (state === 'disconnected' || state === 'connecting') {
-                // 2 saniye sonra hâlâ bağlı değilsek banner göster
-                const t = setTimeout(() => setShowReconnectBanner(true), 2000)
-                return () => clearTimeout(t)
-            }
-        })
-        return off
-    }, [])
 
     // Destructure data functions
     const {
@@ -130,16 +110,6 @@ export default function Chat({ session, darkMode, onToggleDarkMode }: ChatProps)
 
             {/* Ana Layout */}
             <div className={`flex h-[100dvh] w-full bg-white dark:bg-slate-900 overflow-hidden relative`}>
-                {/* Yeniden bağlanma banner'ı — sadece 2s+ kesintilerde gösterilir */}
-                {showReconnectBanner && connectionState !== 'connected' && (
-                    <div
-                        role="status"
-                        aria-live="polite"
-                        className="absolute top-0 left-0 right-0 z-50 bg-amber-500 text-white text-center text-sm py-1.5 px-3 shadow-md"
-                    >
-                        Bağlantı koptu — yeniden bağlanılıyor…
-                    </div>
-                )}
                 {/* Sidebar */}
                 <div className={`${view === 'sidebar' ? 'flex' : 'hidden'} md:flex w-full md:w-[320px] shrink-0 border-r border-gray-100 dark:border-slate-800`}>
                     <Sidebar

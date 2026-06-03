@@ -223,6 +223,7 @@ Each item from the original review was re-checked against the actual source on 2
 | S3 | `invitation_sent` no authz | **REAL** | `backend/socket/handlers.ts:152-157` — no membership check, no rate limit. |
 | S4 | CORS `indexOf` | **REAL** | `backend/config/security.ts:13` — stylistic, easy fix. |
 | S5 | `NODE_ENV` not validated | **FALSE** | `backend/config/env.ts:17` already uses `z.enum([...])`. |
+| S10 | rateLimitMsg keyed by socket.id | **REAL** | `backend/socket/handlers.ts:137` — change key to `ratelimit:msg:${userId}`. |
 
 ### ⚙️ Functionality
 
@@ -291,6 +292,8 @@ All 13 REAL items implemented in working tree. **Not yet committed** — awaitin
 | **PR1 + C5** | `backend/index.ts` | `runCleanup()` wrapped in async IIFE with try/catch; `console.log` replaced with `logger.info`. Cleanup is naturally idempotent (filters by `created_at < threshold`). |
 | **PR3** | `backend/index.ts` | Redis adapter setup wrapped in try/catch + `process.exit(1)` on failure. Added `pubClient.on('error', ...)` listener (only subClient had one). |
 | **S4** | `backend/config/security.ts` | `allowedOrigins.indexOf(origin) !== -1` → `allowedOrigins.includes(origin)`. |
+| **S10** | `backend/socket/handlers.ts` | Rate-limit key changed from `socket.id` to `userId` (per-user single bucket). |
+| **S10** | `backend/tests/unit/handlersRateLimit.test.ts` | New unit test asserting key shape. |
 
 ### Backend test update (1 file)
 
@@ -375,3 +378,94 @@ test(backend): add expire to redis mock for F3 cache-hit path
 - **P2** Presence state filtering — deferred
 - **T2** Redis failure tests — deferred
 - **Message pagination, edit/delete, error boundary, structured logging, graceful shutdown** — backlog
+
+### Commit status
+
+All 13 REAL items + the chat-history-sentinel + darkMode prop landed via 13 commits on `dev2` (HEAD `eb05e6b`). No co-author trailers. Stray `backend/tsconfig.json` trailing newline remains uncommitted (cosmetic, deferred).
+
+---
+
+## 🕐 Backlog — Yapılmayanlar (2026-06-03)
+
+All review2 findings not addressed in the iteration above. Grouped by category. Severity from original review preserved.
+
+### 🔒 Security (5 open)
+
+| # | Sev | Location | Problem | Suggested fix |
+|---|-----|----------|---------|---------------|
+| **S6** | HIGH | `socketValidators.ts:11` | `xss` may be bypassed by malformed UTF-8 / null bytes; size cap not enforced at socket boundary | Reject payloads exceeding `max(1000)` at the parser level (Zod already does this — verify it's not bypassed) + add malformed-utf8 sanity test |
+| **S7** | MED | whole backend | Relies entirely on Supabase SDK for SQL safety | Audit `from()` / `rpc()` calls for unparameterized interpolation; add ESLint rule against template-string SQL |
+| **S8** | MED | `handlers.ts:99-110` | `joinRoom` checks `room_members` membership but not whether the room exists | `SELECT id FROM rooms WHERE id = $1` first; reject `room_not_found` distinctly |
+| **S9** | MED | HTTP routes | No CSRF protection on non-Socket.IO endpoints (auth/profile/upload) | Add `csurf` or double-submit-cookie middleware for cookie-bearing requests |
+| **S10** | HIGH | `handlers.ts` rate-limit Lua | `rateLimitMsg` keyed by `socket.id` not `userId` — attacker opens N sockets to bypass | ✅ **FIXED** in 2026-06-04 (commit `c26953c`) — key changed to `ratelimit:msg:${userId}` |
+
+### ⚙️ Functionality (5 open)
+
+| # | Sev | Location | Problem | Suggested fix |
+|---|-----|----------|---------|---------------|
+| **F2** | MED | `handlers.ts:170` | `io.in(userId).fetchSockets()` O(n) per disconnect | Defer — revisit at >1k concurrent users (current scale: low hundreds) |
+| **F6** | — | `messages` table / hooks | No edit / delete for messages; no UPDATE/DELETE postgres_changes listener | Add `editMessage` / `deleteMessage` socket events + UI + RLS policy |
+| **F7** | MED | `messageService.ts` upload path | No server-side file hash or MIME re-check after Supabase Storage upload | Compute SHA-256 on upload completion; reject mismatches; store hash in `messages.file_hash` |
+| **F8** | HIGH | `get_chat_messages` RPC | No pagination — loads all history per room | Cursor-based pagination on `(created_at, id)`; React infinite scroll |
+| **F9** | LOW | `markMessagesAsRead` | Broadcasts to entire room including sender | Split: emit `messages_read` to room minus sender, or use `socket.to(roomId).emit(...)` |
+
+### ⚡ Performance (6 open)
+
+| # | Sev | Location | Problem | Suggested fix |
+|---|-----|----------|---------|---------------|
+| **P1** | HIGH | `handlers.ts:56-74` | Username resolve hits DB on cache miss on every new connection | Pre-fetch in JWT auth middleware; pass via `socket.data.username`; never look up DB on connect if JWT has `user_metadata.username` |
+| **P2** | MED | `useSocketAndPresence.ts:224-267` | `presenceState()` full object scan on every sync | Filter by `user_id` before processing (deferred) |
+| **P3** | MED | `useSocketAndPresence.ts:354-360` | On room list change, iterates all rooms + emits `joinRoom` per room | Batch via single `socket.emit('joinRooms', [...])` or use Socket.IO roomsets |
+| **P4** | LOW | `messageService.ts:79-95` | `markMessagesAsRead` UPDATE without index hint | Verify composite index `(room_id, user_id, status)` exists; add migration if missing |
+| **P5** | MED | `redisClient.ts` | Single ioredis instance shared for all ops; no pool | At scale, split pub/sub/cmd into 3 connections (standard Socket.IO-Redis pattern) |
+| **P6** | MED | data fetchers | Room list + friend list re-fetched per tab open | Cache in React Query / SWR with stale-while-revalidate; or in Redis with short TTL |
+
+### 🏗️ Code Quality (6 open)
+
+| # | Sev | Location | Problem | Suggested fix |
+|---|-----|----------|---------|---------------|
+| **C3** | MED | `redisClient.ts:18` | `redisOptions: any` — no type checking | Import `RedisOptions` from `ioredis`; type the const |
+| **C4** | LOW | `App.tsx:75-99` | `clearInvalidSession` duplicated | Extract to `frontend/src/utils/auth.ts` (deferred) |
+| **C6** | MED | `App.tsx` | No React error boundary — uncaught render errors blank the app | Add `<ErrorBoundary>` at root; show fallback UI + reload button |
+| **C7** | MED | `Chat.tsx`, `Sidebar` | No loading skeletons for friend/room lists | Add `<Skeleton>` rows while `loading === true` |
+| **C8** | MED | whole frontend | Magic event names (`newMessage`, `typing`, `joinRoom`) scattered as strings | Centralize in `frontend/src/socketEvents.ts` (single source of truth, shared with backend constants ideally) |
+| **C9** | LOW | HTTP routes | No API response wrapper — raw Supabase responses leak to client | `{ ok: true, data }` / `{ ok: false, error: { code, message } }` envelope |
+
+### 🧪 Testing (4 open)
+
+| # | Sev | Location | Problem | Suggested fix |
+|---|-----|----------|---------|---------------|
+| **T2** | HIGH | `tests/` | No test for Redis-down / misconfigured scenarios | Add `tests/integration/redis-failure.test.ts` — kill client mid-test, assert server exits 1 with logged error |
+| **T5** | MED | `e2e/` | Only `auth-flow.unauth.spec.ts`; no E2E for full DM/group flow | Add auth'd E2E: login → DM friend → receive → mark read → group invite |
+| **T6** | MED | `tests/unit/handlers.test.ts` (missing) | No coverage for connection-limit Lua (`decrementConnections` / `INCR`+`EXPIRE`) | Unit test the Lua via `redis.eval()`; assert overflow rejected |
+| **T7** | MED | `performance.test.ts` | Likely unit-level only — no real load | Wire `autocannon` or `k6`; target 1k concurrent sockets, 100 msg/s; assert p95 latency |
+
+### 🌐 Production Readiness (7 open)
+
+| # | Sev | Location | Problem | Suggested fix |
+|---|-----|----------|---------|---------------|
+| **PR4** | MED | `handlers.ts:159-178` | Disconnect handler catches errors but still runs cleanup — orphans possible | Add explicit "is last socket" Redis check before DB write; short-circuit cleanup if not |
+| **PR6** | HIGH | `/health` | Returns `healthy` without checking DB or Redis | Add `GET /health/deep` that pings Supabase + Redis with 1s timeout; return 503 on failure |
+| **PR7** | HIGH | `index.ts` | No SIGTERM/SIGINT handler — in-flight requests dropped on `docker stop` | Listen for signals, call `server.close()` + `io.close()` + Redis disconnect; 10s timeout then `process.exit(1)` |
+| **PR8** | MED | repo root | No Dockerfile for backend | Multi-stage: `node:22-alpine` build → `node:22-alpine` runtime; non-root user; `HEALTHCHECK` to `/health` |
+| **PR9** | MED | `index.ts:25` (morgan) | `combined` format = plain text — hard to parse in cloud logs | Replace with `pino-http` JSON output, or morgan stream into winston JSON formatter |
+| **PR10** | MED | whole backend | No metrics endpoint (Prometheus / OpenTelemetry) | Expose `/metrics` with `prom-client`; instrument request count/latency, socket count, Redis ops |
+| **PR11** | LOW | `index.ts` cleanup | Cleanup error not visible to ops if logger is misconfigured | Add boot-time startup banner with version, env, listening port, Redis adapter status |
+
+### Summary
+
+- **33 open items** (5 security + 5 functionality + 6 performance + 6 code quality + 4 testing + 7 production readiness)
+- **Skipped in prior iteration:** F2, C4, P2, T2 (4 items, all marked as such)
+- **New since prior iteration:** S6, S7, S8, S9, S10, F6, F7, F8, F9, P1, P3, P5, P6, C3, C6, C7, C8, C9, T5, T6, T7, PR4, PR6, PR7, PR8, PR9, PR10, PR11 (28 items — all the unchecked gaps in the original review)
+
+### Suggested next iteration scope
+
+If picking the top 5 for the next sprint:
+
+1. **F8** No message pagination — user-visible at >100 messages per room
+2. **PR7** No graceful shutdown — blocks zero-downtime deploys
+3. **PR6** Health check doesn't verify deps — orchestrator can't detect real outages
+4. **S10** Rate limit keying — security regression risk under load
+5. **F6** Message edit/delete — frequently requested, not yet scoped
+
+Each of these would go through the standard `brainstorm → spec → plan → implement → verify` flow. See `docs/superpowers/specs/` for prior examples.

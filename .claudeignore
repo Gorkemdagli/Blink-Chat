@@ -81,18 +81,3 @@ supabase/.temp/
 .certificates/
 
 # Project specific
-analiz2.md
-to-do.md
-online.md
-review.md
-
-/docs
-CLAUDE.md
-
-.agent/
-
-docs/superpowers/
-review2.md
-.claudeignore/
-.claude/
-/app

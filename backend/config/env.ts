@@ -12,7 +12,7 @@ const envSchema = z.object({
     REDIS_TLS: z.string().optional(),
     REDIS_TLS_REJECT_UNAUTHORIZED: z.enum(['true', 'false']).default('false'),
     SOCKET_RATE_LIMIT_MS: z.string().default('500'),
-    SOCKET_MAX_CONNECTIONS: z.string().default('5'),
+    SOCKET_MAX_CONNECTIONS: z.string().default('20'),
     SWAGGER_USER: z.string().default('admin'),
     SWAGGER_PASSWORD: z.string().default('admin_password'),
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
