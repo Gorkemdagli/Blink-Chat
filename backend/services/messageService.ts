@@ -50,6 +50,11 @@ export class MessageService {
         if (cachedUser) {
             logger.debug(`Redis cache hit for user: ${userId}`);
             user = JSON.parse(cachedUser);
+            // Sliding TTL: aktif kullanıcının cache süresini uzat, soğuk önbellek
+            // stampede'ini önler. Hata log'lanır, mesaj akışını engellemez.
+            redis.expire(cacheKey, 3600).catch(err => {
+                logger.warn(`Redis expire error for user ${userId}`, err);
+            });
         } else {
             logger.debug(`Redis cache miss or error, fetching from DB: ${userId}`);
             const { data: dbUser, error: userError } = await supabase
