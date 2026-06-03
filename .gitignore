@@ -93,3 +93,6 @@ CLAUDE.md
 
 docs/superpowers/
 review2.md
+.claudeignore/
+.claude/
+/app
