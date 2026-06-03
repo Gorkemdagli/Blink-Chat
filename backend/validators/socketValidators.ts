@@ -41,3 +41,8 @@ export const StopTypingSchema = z.object({
     roomId: z.string().min(1, 'Room ID is required'),
     userId: z.string().min(1, 'User ID is required')
 });
+
+export const InvitationSchema = z.object({
+    roomId: z.string().min(1, 'Room ID is required'),
+    inviteeId: z.string().min(1, 'Invitee ID is required')
+});

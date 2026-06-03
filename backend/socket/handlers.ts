@@ -4,6 +4,13 @@ import redis from '../redisClient';
 import logger from '../config/logger';
 import { MessageController } from '../controllers/messageController';
 import { env } from '../config/env';
+import {
+    MessageDataSchema,
+    TypingSchema,
+    StopTypingSchema,
+    MarkReadSchema,
+    InvitationSchema,
+} from '../validators/socketValidators';
 
 export function setupSocketHandlers(io: Server) {
     // ─── JWT Authentication Middleware ───
@@ -120,7 +127,13 @@ export function setupSocketHandlers(io: Server) {
         });
 
         // ─── sendMessage: Rate limit + userId override ───
-        socket.on('sendMessage', async (data: any) => {
+        socket.on('sendMessage', async (data: unknown) => {
+            const parsed = MessageDataSchema.safeParse(data);
+            if (!parsed.success) {
+                socket.emit('error', { event: 'sendMessage', message: 'invalid payload' });
+                return;
+            }
+
             const rateLimitKey = `ratelimit:msg:${socket.id}`;
             const windowMs = parseInt(env.SOCKET_RATE_LIMIT_MS, 10);
 
@@ -131,27 +144,69 @@ export function setupSocketHandlers(io: Server) {
             }
 
             // Client'in gönderdiği userId'yi yok say, token'dan gelen güvenli değeri kullan
-            const safeData = { ...data, userId };
+            const safeData = { ...parsed.data, userId };
             MessageController.handleSendMessage(io, socket, safeData);
         });
 
         // ─── typing: userId + username override ───
-        socket.on('typing', (data: any) => {
-            MessageController.handleTyping(socket, { ...data, userId, username: socket.data.username });
+        socket.on('typing', (data: unknown) => {
+            const parsed = TypingSchema.safeParse(data);
+            if (!parsed.success) {
+                socket.emit('error', { event: 'typing', message: 'invalid payload' });
+                return;
+            }
+            MessageController.handleTyping(socket, { ...parsed.data, userId, username: socket.data.username });
         });
 
-        socket.on('stop_typing', (data: any) => {
-            MessageController.handleStopTyping(socket, { ...data, userId });
+        socket.on('stop_typing', (data: unknown) => {
+            const parsed = StopTypingSchema.safeParse(data);
+            if (!parsed.success) {
+                socket.emit('error', { event: 'stop_typing', message: 'invalid payload' });
+                return;
+            }
+            MessageController.handleStopTyping(socket, { ...parsed.data, userId });
         });
 
         // ─── mark_read: userId override ───
-        socket.on('mark_read', (data: any) => {
-            MessageController.handleMarkRead(io, socket, { ...data, userId });
+        socket.on('mark_read', (data: unknown) => {
+            const parsed = MarkReadSchema.safeParse(data);
+            if (!parsed.success) {
+                socket.emit('error', { event: 'mark_read', message: 'invalid payload' });
+                return;
+            }
+            MessageController.handleMarkRead(io, socket, { ...parsed.data, userId });
         });
 
         // ─── invitation_sent: Reali-time notification fallback ───
-        socket.on('invitation_sent', ({ inviteeId }: { inviteeId: string }) => {
-            if (!inviteeId) return;
+        socket.on('invitation_sent', async (data: unknown) => {
+            const parsed = InvitationSchema.safeParse(data);
+            if (!parsed.success) {
+                socket.emit('error', { event: 'invitation_sent', message: 'invalid payload' });
+                return;
+            }
+
+            const { roomId, inviteeId } = parsed.data;
+
+            // Yetki kontrolü: gönderici bu odanın üyesi mi?
+            try {
+                const { data: membership, error } = await supabase
+                    .from('room_members')
+                    .select('user_id')
+                    .eq('room_id', roomId)
+                    .eq('user_id', userId)
+                    .maybeSingle();
+
+                if (error || !membership) {
+                    logger.warn(`invitation_sent rejected: User ${userId} is not a member of room ${roomId}`);
+                    socket.emit('error', { event: 'invitation_sent', message: 'Bu odaya davet gönderme yetkiniz yok.' });
+                    return;
+                }
+            } catch (err) {
+                logger.error('invitation_sent membership check error:', err);
+                socket.emit('error', { event: 'invitation_sent', message: 'Yetki kontrolü başarısız.' });
+                return;
+            }
+
             // Redis Adapter ile tüm sunuculardaki hedefe iletilir
             io.to(`user:${inviteeId}`).emit('new_invitation');
         });
