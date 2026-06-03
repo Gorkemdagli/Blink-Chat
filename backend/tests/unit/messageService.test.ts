@@ -12,6 +12,7 @@ vi.mock('../../redisClient', () => ({
     default: {
         get: vi.fn(),
         set: vi.fn(),
+        expire: vi.fn().mockResolvedValue(1),
     }
 }));
 
