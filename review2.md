@@ -223,6 +223,7 @@ Each item from the original review was re-checked against the actual source on 2
 | S3 | `invitation_sent` no authz | **REAL** | `backend/socket/handlers.ts:152-157` — no membership check, no rate limit. |
 | S4 | CORS `indexOf` | **REAL** | `backend/config/security.ts:13` — stylistic, easy fix. |
 | S5 | `NODE_ENV` not validated | **FALSE** | `backend/config/env.ts:17` already uses `z.enum([...])`. |
+| S10 | rateLimitMsg keyed by socket.id | **REAL** | `backend/socket/handlers.ts:137` — change key to `ratelimit:msg:${userId}`. |
 
 ### ⚙️ Functionality
 
@@ -291,6 +292,8 @@ All 13 REAL items implemented in working tree. **Not yet committed** — awaitin
 | **PR1 + C5** | `backend/index.ts` | `runCleanup()` wrapped in async IIFE with try/catch; `console.log` replaced with `logger.info`. Cleanup is naturally idempotent (filters by `created_at < threshold`). |
 | **PR3** | `backend/index.ts` | Redis adapter setup wrapped in try/catch + `process.exit(1)` on failure. Added `pubClient.on('error', ...)` listener (only subClient had one). |
 | **S4** | `backend/config/security.ts` | `allowedOrigins.indexOf(origin) !== -1` → `allowedOrigins.includes(origin)`. |
+| **S10** | `backend/socket/handlers.ts` | Rate-limit key changed from `socket.id` to `userId` (per-user single bucket). |
+| **S10** | `backend/tests/unit/handlersRateLimit.test.ts` | New unit test asserting key shape. |
 
 ### Backend test update (1 file)
 
