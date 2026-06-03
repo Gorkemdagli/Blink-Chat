@@ -57,6 +57,7 @@ export function useChatState() {
     const presenceSubscribedRef = useRef(false)
     const userCacheRef = useRef<Map<string, User>>(new Map())
     const deletedMessageIdsRef = useRef<Set<string>>(new Set())
+    const sentMessageIdsRef = useRef<Set<string>>(new Set())
     const fetchRoomsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
     // Toast helper
@@ -138,6 +139,7 @@ export function useChatState() {
         presenceSubscribedRef,
         userCacheRef,
         deletedMessageIdsRef,
+        sentMessageIdsRef,
         fetchRoomsTimeoutRef,
 
         // Cache helpers

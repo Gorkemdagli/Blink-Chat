@@ -82,7 +82,7 @@ describe('setupSocketHandlers — rate-limit keying', () => {
         await captured.connection(fakeSocket);
 
         // Trigger the captured sendMessage handler
-        const sendMessageHandler = (fakeSocket.on as vi.Mock).mock.calls
+        const sendMessageHandler = (fakeSocket.on as ReturnType<typeof vi.fn>).mock.calls
             .find(([event]) => event === 'sendMessage')?.[1];
         expect(sendMessageHandler).toBeDefined();
 

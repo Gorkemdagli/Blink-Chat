@@ -37,7 +37,7 @@ export function useChatActions(session: Session, state: ChatState, dataFunctions
         setShowCreateRoomModal,
         setNewRoomName, setSelectedFriendsForRoom,
         setActiveTab, setView,
-        showToast, deletedMessageIdsRef,
+        showToast, deletedMessageIdsRef, sentMessageIdsRef,
         setCurrentUser, userCacheRef, setUsers
     } = state
 
@@ -116,8 +116,22 @@ export function useChatActions(session: Session, state: ChatState, dataFunctions
             content: newMessage.trim()
         })
 
+        // Optimistic add — echo handler skips this ID via sentMessageIdsRef
+        const tempId = `temp-${Date.now()}-${Math.random()}`
+        sentMessageIdsRef.current.add(tempId)
+        const optimisticMsg: Message = {
+            id: tempId,
+            room_id: targetRoomId,
+            user_id: session.user.id,
+            content: newMessage.trim(),
+            message_type: 'text',
+            status: 'sent',
+            created_at: new Date().toISOString()
+        }
+        setMessages((prev: Message[]) => [...prev, optimisticMsg])
+
         setNewMessage('')
-    }, [newMessage, currentRoom, session.user.id, setNewMessage, setRooms, setCurrentRoom, showToast])
+    }, [newMessage, currentRoom, session.user.id, setNewMessage, setRooms, setCurrentRoom, showToast, sentMessageIdsRef, setMessages])
 
     // Generic Message Send Handler (used by ChatWindow)
     const handleSendMessage = useCallback(async (content: string, fileUrl: string | null, messageType: string, fileName: string | null, fileSize: number | null) => {
@@ -180,7 +194,21 @@ export function useChatActions(session: Session, state: ChatState, dataFunctions
             fileName,
             fileSize
         })
-    }, [currentRoom, session.user.id, setRooms, setCurrentRoom, showToast])
+
+        // Optimistic add
+        const tempId = `temp-${Date.now()}-${Math.random()}`
+        sentMessageIdsRef.current.add(tempId)
+        const optimisticMsg: Message = {
+            id: tempId,
+            room_id: targetRoomId,
+            user_id: session.user.id,
+            content,
+            message_type: messageType as Message['message_type'],
+            status: 'sent',
+            created_at: new Date().toISOString()
+        }
+        setMessages((prev: Message[]) => [...prev, optimisticMsg])
+    }, [currentRoom, session.user.id, setRooms, setCurrentRoom, showToast, sentMessageIdsRef, setMessages])
 
     // Oda seç - startDM inline olarak kullanılıyor
     const handleSelectRoom = useCallback(async (room: Room) => {

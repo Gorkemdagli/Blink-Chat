@@ -401,7 +401,10 @@ export function useChatData(session: Session, state: ChatState) {
     const fetchMessages = useCallback(async (roomId: string, isInitial = true) => {
         if (isInitial) {
             setIsLoadingMessages(true)
-            setMessages([])
+            // Skip wipe when pending echoed message exists — dedup preserves it
+            if (!state.sentMessageIdsRef?.current?.size) {
+                setMessages([])
+            }
             setOldestMessageId(null)
             setHasMoreMessages(false)
         }
