@@ -134,7 +134,7 @@ export function setupSocketHandlers(io: Server) {
                 return;
             }
 
-            const rateLimitKey = `ratelimit:msg:${socket.id}`;
+            const rateLimitKey = `ratelimit:msg:${userId}`;
             const windowMs = parseInt(env.SOCKET_RATE_LIMIT_MS, 10);
 
             const allowed = await (redis as any).rateLimitMsg(rateLimitKey, windowMs);
