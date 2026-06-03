@@ -117,7 +117,7 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Run Tests with Coverage
-        run: npx vitest run --coverage
+        run: npm test -- --coverage
 
       - name: Upload Coverage
         if: always()
