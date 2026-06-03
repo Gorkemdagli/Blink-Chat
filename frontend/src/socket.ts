@@ -6,6 +6,27 @@ let connectionCount = 0
 let isInitializing = false
 let currentToken: string | null = null
 
+// Bağlantı durumu dinleyicileri — UI banner/toast için hafif pub/sub.
+type ConnectionState = 'connected' | 'disconnected' | 'connecting'
+const connectionListeners = new Set<(state: ConnectionState) => void>()
+
+const emitConnectionState = (state: ConnectionState) => {
+    connectionListeners.forEach(cb => {
+        try { cb(state) } catch { /* dinleyici hatası diğerlerini engellemesin */ }
+    })
+}
+
+/**
+ * Bağlantı durumu değişimlerine abone ol. Çıkışta listener kaydını sil.
+ * Reconnecting banner gibi UI bileşenleri tarafından kullanılır.
+ */
+export const onConnectionStateChange = (cb: (state: ConnectionState) => void): (() => void) => {
+    connectionListeners.add(cb)
+    // Mevcut durumu hemen bildir (yeni banner ilk render'da doğru state'i görsün)
+    cb(socket?.connected ? 'connected' : (isInitializing ? 'connecting' : 'disconnected'))
+    return () => connectionListeners.delete(cb)
+}
+
 /**
  * Mevcut access token'ı güncelle.
  * Socket bağlantısı zaten kuruluysa, yeni token ile yeniden bağlan.
@@ -54,16 +75,19 @@ export const getSocket = (token?: string | null): Socket => {
             socket.on('connect', () => {
                 connectionCount++
                 isInitializing = false
+                emitConnectionState('connected')
             })
 
             socket.on('disconnect', (reason: string) => {
                 isInitializing = false
                 console.log(`🔌 Socket.IO disconnected: ${reason}`)
+                emitConnectionState('disconnected')
             })
 
             socket.on('connect_error', (error: Error) => {
                 isInitializing = false
                 console.error('🔌 Socket.IO connection error:', error.message)
+                emitConnectionState('connecting')
             })
         } else if (!socket.connected) {
             // Token güncelleyip yeniden bağlan
