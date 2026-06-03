@@ -20,6 +20,7 @@ interface MessageInputProps {
     emojiPickerRef: React.RefObject<HTMLDivElement | null>
     attachMenuRef: React.RefObject<HTMLDivElement | null>
     isMobile: boolean
+    darkMode?: boolean
 }
 
 export default function MessageInput({
@@ -38,14 +39,15 @@ export default function MessageInput({
     handleFileSelect,
     emojiPickerRef,
     attachMenuRef,
-    isMobile
+    isMobile,
+    darkMode
 }: MessageInputProps) {
     const formatBytes = (bytes: number | undefined | null, decimals = 1) => {
         if (!bytes) return '0 Bytes'
         const k = 1024
         const dm = decimals < 0 ? 0 : decimals
-        const sizes = ['Bayt', 'KB', 'MB', 'GB']
-        const i = Math.floor(Math.log(bytes) / Math.log(k))
+        const sizes = ['Bayt', 'KB', 'MB', 'GB', 'TB', 'PB']
+        const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1)
         return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]
     }
 
@@ -55,19 +57,21 @@ export default function MessageInput({
 
     return (
         <div className="h-[72px] md:h-[80px] px-2 md:px-6 bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-slate-800 shrink-0 relative flex items-center">
-            {/* Hidden Permanent Inputs for Mobile intents */}
+            {/* Hidden Permanent Inputs for Mobile intents — visually hidden but focusable */}
             <input
+                id="chat-image-input"
                 type="file"
                 accept="image/*"
-                className="hidden"
+                className="absolute opacity-0 pointer-events-none w-px h-px"
                 ref={imageInputRef}
                 onClick={(e) => { e.currentTarget.value = '' }}
                 onChange={handleFileSelect}
             />
             <input
+                id="chat-file-input"
                 type="file"
-                accept="*"
-                className="hidden"
+                accept="*/*"
+                className="absolute opacity-0 pointer-events-none w-px h-px"
                 ref={fileInputRef}
                 onClick={(e) => { e.currentTarget.value = '' }}
                 onChange={handleFileSelect}
@@ -83,7 +87,7 @@ export default function MessageInput({
                     <Picker
                         data={data}
                         onEmojiSelect={handleEmojiSelect}
-                        theme={document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
+                        theme={darkMode ? 'dark' : 'light'}
                         locale="tr"
                         previewPosition="none"
                         skinTonePosition="search"
@@ -147,26 +151,24 @@ export default function MessageInput({
                             aria-label="Dosya Ekleme Seçenekleri"
                             className="absolute bottom-full right-2 md:right-6 mb-2 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-100 dark:border-slate-700 p-2 flex flex-col gap-1 min-w-[140px] z-50 animate-in fade-in slide-in-from-bottom-2"
                         >
-                            <div 
-                                onClick={() => {
-                                    setShowAttachMenu(false);
-                                    imageInputRef.current?.click();
-                                }}
+                            <label
+                                htmlFor="chat-image-input"
+                                role="menuitem"
+                                tabIndex={0}
                                 className="relative flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md text-sm text-gray-700 dark:text-gray-200 transition-colors w-full text-left font-medium overflow-hidden cursor-pointer"
                             >
                                 <ImageIcon size={16} className="text-purple-500 relative z-0" aria-hidden="true" />
                                 <span className="relative z-0">Görsel Gönder</span>
-                            </div>
-                            <div 
-                                onClick={() => {
-                                    setShowAttachMenu(false);
-                                    fileInputRef.current?.click();
-                                }}
+                            </label>
+                            <label
+                                htmlFor="chat-file-input"
+                                role="menuitem"
+                                tabIndex={0}
                                 className="relative flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md text-sm text-gray-700 dark:text-gray-200 transition-colors w-full text-left font-medium overflow-hidden cursor-pointer"
                             >
                                 <FileIcon size={16} className="text-blue-500 relative z-0" aria-hidden="true" />
                                 <span className="relative z-0">Dosya Gönder</span>
-                            </div>
+                            </label>
                         </div>
                     )}
 

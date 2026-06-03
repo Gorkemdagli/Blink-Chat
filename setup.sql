@@ -650,7 +650,7 @@ $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
 
 -- Users
 DROP POLICY IF EXISTS "Profiles are public" ON public.users;
-CREATE POLICY "Profiles are public" ON public.users FOR SELECT USING (true);
+CREATE POLICY "Profiles are public" ON public.users FOR SELECT USING (auth.role() = 'authenticated');
 DROP POLICY IF EXISTS "Users can update own profile" ON public.users;
 CREATE POLICY "Users can update own profile" ON public.users
   FOR UPDATE TO authenticated

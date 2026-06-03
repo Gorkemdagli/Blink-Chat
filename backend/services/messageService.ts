@@ -16,7 +16,15 @@ export interface MessageData {
 export class MessageService {
     static async saveMessage(data: MessageData) {
         const { roomId, userId, content, fileUrl, messageType = 'text', fileName, fileSize } = data;
-        const sanitizedContent = xss(content);
+        // xss default options already escape <, >, &, ", '. The flags below are
+        // defensive intent-revealing: stripIgnoreTag drops inner text of unknown
+        // tags (e.g. <unknown>x</unknown> → ''); allowCommentTag keeps HTML
+        // comments out. Zod (MessageDataSchema.content) guarantees content is
+        // free of null bytes and C0 controls before reaching here.
+        const sanitizedContent = xss(content, {
+            stripIgnoreTag: true,
+            allowCommentTag: false,
+        });
 
         const { data: messageData, error } = await supabase
             .from('messages')
@@ -50,6 +58,11 @@ export class MessageService {
         if (cachedUser) {
             logger.debug(`Redis cache hit for user: ${userId}`);
             user = JSON.parse(cachedUser);
+            // Sliding TTL: aktif kullanıcının cache süresini uzat, soğuk önbellek
+            // stampede'ini önler. Hata log'lanır, mesaj akışını engellemez.
+            redis.expire(cacheKey, 3600).catch(err => {
+                logger.warn(`Redis expire error for user ${userId}`, err);
+            });
         } else {
             logger.debug(`Redis cache miss or error, fetching from DB: ${userId}`);
             const { data: dbUser, error: userError } = await supabase

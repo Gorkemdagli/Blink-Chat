@@ -48,6 +48,12 @@ export interface Message {
     sender?: string
 }
 
+// Realtime socket push'ları için hydrated mesaj (backend `newMessage` event payload).
+// `Message` ile aynı şekil + kullanıcı bilgisi zorunlu (backend `messageService` join'i).
+export interface WebSocketMessage extends Message {
+    user: User
+}
+
 export interface FriendRequest {
     id: string
     sender_id: string

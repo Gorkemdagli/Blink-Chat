@@ -220,8 +220,12 @@ function App() {
       // Update immediately on session start
       updateLastActive(session)
 
+      // Sekme görünür değilken localStorage yazma — arka plan sekmeleri
+      // gereksiz yere I/O ve inactivity-sıfırlama tetiklemesin.
       activeInterval = setInterval(() => {
-        updateLastActive(session)
+        if (document.visibilityState === 'visible') {
+          updateLastActive(session)
+        }
       }, 5 * 60 * 1000) // 5 minutes
     }
 

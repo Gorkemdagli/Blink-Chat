@@ -59,11 +59,18 @@ const io = new Server(server, {
     pingInterval: 25000
 });
 
-// Redis Adapter Setup
-const pubClient = redis;
-const subClient = redis.duplicate();
-subClient.on('error', (err) => logger.error('❌ Redis SubClient hatası:', err));
-io.adapter(createAdapter(pubClient, subClient));
+// Redis Adapter Setup — pub/sub olmadan horizontal scaling imkansız,
+// adapter kurulumu başarısız olursa sunucu anlamlı çalışamaz.
+try {
+    const pubClient = redis;
+    const subClient = redis.duplicate();
+    pubClient.on('error', (err) => logger.error('❌ Redis PubClient hatası:', err));
+    subClient.on('error', (err) => logger.error('❌ Redis SubClient hatası:', err));
+    io.adapter(createAdapter(pubClient, subClient));
+} catch (err) {
+    logger.error('❌ Redis adapter kurulumu başarısız, sunucu kapatılıyor:', err);
+    process.exit(1);
+}
 
 // Setup Socket.IO event handlers
 setupSocketHandlers(io);
@@ -71,9 +78,16 @@ setupSocketHandlers(io);
 
 // Initialize Cron Jobs (skip in test environment)
 if (process.env.NODE_ENV !== 'test') {
-    // Run cleanup immediately on startup to catch missed jobs
-    console.log('🚀 Server starting... Running initial cleanup check.');
-    runCleanup();
+    // Run cleanup immediately on startup to catch missed jobs.
+    // Doğal olarak idempotent: created_at eşiğine göre filtreler, daha önce
+    // silinen satırlar/dosyalar no-op olur. Hata olursa sunucu başlatmayı engelleme.
+    (async () => {
+        try {
+            await runCleanup();
+        } catch (err) {
+            logger.error('❌ İlk cleanup çalıştırması başarısız, devam ediliyor:', err);
+        }
+    })();
 
     // Schedule daily job
     scheduleCleanup();
@@ -85,7 +99,7 @@ const isTestEnv = process.env.NODE_ENV === 'test' || !!process.env.JEST_WORKER_I
 if (!isTestEnv) {
     const PORT = process.env.PORT || 3000;
     server.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
+        logger.info(`Server running on port ${PORT}`);
     });
 }
 

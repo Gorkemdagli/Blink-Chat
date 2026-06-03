@@ -79,7 +79,7 @@ jobs:
         run: npm ci
 
       - name: Run Tests with Coverage
-        run: npm run test:coverage -- --runInBand
+        run: npm run test:coverage -- --pool=forks
         env:
           NODE_ENV: test
           FRONTEND_URL: http://localhost:5173
@@ -117,7 +117,7 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Run Tests with Coverage
-        run: npx vitest run --coverage
+        run: npm test -- --coverage
 
       - name: Upload Coverage
         if: always()

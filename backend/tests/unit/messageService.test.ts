@@ -1,19 +1,39 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MessageService } from '../../services/messageService';
 import supabase from '../../supabaseClient';
 import redis from '../../redisClient';
 import xss from 'xss';
 
-jest.mock('xss', () => jest.fn((val) => `sanitized_${val}`));
-jest.mock('../../config/logger', () => ({
-    error: jest.fn(),
-    debug: jest.fn(),
-    warn: jest.fn(),
-    info: jest.fn()
+vi.mock('xss', () => ({
+    default: vi.fn((val) => `sanitized_${val}`)
+}));
+
+vi.mock('../../redisClient', () => ({
+    default: {
+        get: vi.fn(),
+        set: vi.fn(),
+        expire: vi.fn().mockResolvedValue(1),
+    }
+}));
+
+vi.mock('../../supabaseClient', () => ({
+    default: {
+        from: vi.fn()
+    }
+}));
+
+vi.mock('../../config/logger', () => ({
+    default: {
+        error: vi.fn(),
+        debug: vi.fn(),
+        warn: vi.fn(),
+        info: vi.fn()
+    }
 }));
 
 describe('MessageService', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     describe('saveMessage', () => {
@@ -21,12 +41,12 @@ describe('MessageService', () => {
             const data = { roomId: 'room1', userId: 'user1', content: 'test content' };
 
             // Mock redis cache miss
-            (redis.get as jest.Mock).mockResolvedValueOnce(null);
+            (redis.get as vi.Mock).mockResolvedValueOnce(null);
 
             // Mock DB insert
-            (supabase.from as jest.Mock).mockReturnValueOnce({
-                insert: jest.fn().mockReturnValueOnce({
-                    select: jest.fn().mockResolvedValueOnce({
+            (supabase.from as vi.Mock).mockReturnValueOnce({
+                insert: vi.fn().mockReturnValueOnce({
+                    select: vi.fn().mockResolvedValueOnce({
                         data: [{ id: 'msg1', content: 'sanitized_test content', user_id: 'user1', room_id: 'room1' }],
                         error: null
                     })
@@ -34,10 +54,10 @@ describe('MessageService', () => {
             });
 
             // Mock DB fetch user
-            (supabase.from as jest.Mock).mockReturnValueOnce({
-                select: jest.fn().mockReturnValueOnce({
-                    eq: jest.fn().mockReturnValueOnce({
-                        single: jest.fn().mockResolvedValueOnce({
+            (supabase.from as vi.Mock).mockReturnValueOnce({
+                select: vi.fn().mockReturnValueOnce({
+                    eq: vi.fn().mockReturnValueOnce({
+                        single: vi.fn().mockResolvedValueOnce({
                             data: { id: 'user1', username: 'testuser' },
                             error: null
                         })
@@ -47,7 +67,10 @@ describe('MessageService', () => {
 
             const result = await MessageService.saveMessage(data);
 
-            expect(xss).toHaveBeenCalledWith('test content');
+            expect(xss).toHaveBeenCalledWith('test content', {
+                stripIgnoreTag: true,
+                allowCommentTag: false,
+            });
             expect(result.content).toBe('sanitized_test content');
             expect(result.user).toEqual({ id: 'user1', username: 'testuser' });
             expect(redis.set).toHaveBeenCalled();
@@ -57,12 +80,12 @@ describe('MessageService', () => {
             const data = { roomId: 'room1', userId: 'user1', content: 'test content' };
 
             // Mock redis cache hit
-            (redis.get as jest.Mock).mockResolvedValueOnce(JSON.stringify({ id: 'user1', username: 'cacheduser' }));
+            (redis.get as vi.Mock).mockResolvedValueOnce(JSON.stringify({ id: 'user1', username: 'cacheduser' }));
 
             // Mock DB insert
-            (supabase.from as jest.Mock).mockReturnValueOnce({
-                insert: jest.fn().mockReturnValueOnce({
-                    select: jest.fn().mockResolvedValueOnce({
+            (supabase.from as vi.Mock).mockReturnValueOnce({
+                insert: vi.fn().mockReturnValueOnce({
+                    select: vi.fn().mockResolvedValueOnce({
                         data: [{ id: 'msg1', content: 'sanitized_test content', user_id: 'user1', room_id: 'room1' }],
                         error: null
                     })
@@ -80,9 +103,9 @@ describe('MessageService', () => {
             const data = { roomId: 'room1', userId: 'user1', content: 'test content' };
 
             // Mock DB insert error
-            (supabase.from as jest.Mock).mockReturnValueOnce({
-                insert: jest.fn().mockReturnValueOnce({
-                    select: jest.fn().mockResolvedValueOnce({
+            (supabase.from as vi.Mock).mockReturnValueOnce({
+                insert: vi.fn().mockReturnValueOnce({
+                    select: vi.fn().mockResolvedValueOnce({
                         data: null,
                         error: new Error('DB Error')
                     })
@@ -95,12 +118,12 @@ describe('MessageService', () => {
 
     describe('markMessagesAsRead', () => {
         it('should update unread messages status', async () => {
-            (supabase.from as jest.Mock).mockReturnValueOnce({
-                update: jest.fn().mockReturnValueOnce({
-                    eq: jest.fn().mockReturnValueOnce({
-                        neq: jest.fn().mockReturnValueOnce({
-                            not: jest.fn().mockReturnValueOnce({
-                                select: jest.fn().mockResolvedValueOnce({
+            (supabase.from as vi.Mock).mockReturnValueOnce({
+                update: vi.fn().mockReturnValueOnce({
+                    eq: vi.fn().mockReturnValueOnce({
+                        neq: vi.fn().mockReturnValueOnce({
+                            not: vi.fn().mockReturnValueOnce({
+                                select: vi.fn().mockResolvedValueOnce({
                                     data: [{ id: 'msg1' }, { id: 'msg2' }],
                                     error: null
                                 })

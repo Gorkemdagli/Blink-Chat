@@ -10,13 +10,15 @@
         "strict": true,
         "skipLibCheck": true,
         "resolveJsonModule": true,
-        "isolatedModules": true
+        "isolatedModules": true,
+        "types": ["vitest/globals"]
     },
     "include": [
         "./**/*.ts"
     ],
     "exclude": [
         "node_modules",
-        "dist"
+        "dist",
+        "tests"
     ]
 }

@@ -5,10 +5,20 @@ const ALLOWED_FILE_EXTENSIONS = [
     'pdf', 'doc', 'docx', 'txt', 'mp4', 'mp3', 'zip', 'rar'
 ];
 
+// Forbidden: C0 controls except \t \n \r, plus DEL.
+// Allowed: \t (U+0009), \n (U+000A), \r (U+000D).
+const FORBIDDEN_CONTROL_CHARS = /[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F]/;
+
 export const MessageDataSchema = z.object({
     roomId: z.string().min(1, 'Room ID is required'),
     userId: z.string().min(1, 'User ID is required'),
-    content: z.string().max(1000, "Mesaj 1000 karakterden uzun olamaz"),
+    content: z
+        .string()
+        .max(1000, "Mesaj 1000 karakterden uzun olamaz")
+        .refine(
+            (s) => !FORBIDDEN_CONTROL_CHARS.test(s),
+            'Mesaj kontrol karakteri içeremez'
+        ),
     fileUrl: z.string().url().optional().nullable().refine(url => {
         if (!url) return true;
         const supabaseUrl = process.env.SUPABASE_URL || '';
@@ -40,4 +50,9 @@ export const TypingSchema = z.object({
 export const StopTypingSchema = z.object({
     roomId: z.string().min(1, 'Room ID is required'),
     userId: z.string().min(1, 'User ID is required')
+});
+
+export const InvitationSchema = z.object({
+    roomId: z.string().min(1, 'Room ID is required'),
+    inviteeId: z.string().min(1, 'Invitee ID is required')
 });
