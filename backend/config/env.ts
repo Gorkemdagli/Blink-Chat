@@ -10,6 +10,7 @@ const envSchema = z.object({
     REDIS_PORT: z.string().default('6379'),
     REDIS_PASSWORD: z.string().optional(),
     REDIS_TLS: z.string().optional(),
+    REDIS_TLS_REJECT_UNAUTHORIZED: z.enum(['true', 'false']).default('false'),
     SOCKET_RATE_LIMIT_MS: z.string().default('500'),
     SOCKET_MAX_CONNECTIONS: z.string().default('5'),
     SWAGGER_USER: z.string().default('admin'),

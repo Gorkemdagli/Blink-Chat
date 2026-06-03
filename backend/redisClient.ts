@@ -1,5 +1,6 @@
 import Redis from 'ioredis';
 import logger from './config/logger';
+import { env } from './config/env';
 
 // Robust Host Extraction: Strips protocol part if user accidentally provided a URL
 let redisHost = process.env.REDIS_HOST || 'localhost';
@@ -31,8 +32,10 @@ const redisOptions: any = {
 };
 
 if (isTLS) {
+    // MitM koruması: production'da sertifika doğrulaması ZORUNLU.
+    // Dev ortamında self-signed sertifikalar için env flag ile kapatılabilir.
     redisOptions.tls = {
-        rejectUnauthorized: false // Upstash ve bazı cloud sağlayıcılar için gerekebilir
+        rejectUnauthorized: env.REDIS_TLS_REJECT_UNAUTHORIZED === 'true'
     };
 }
 
