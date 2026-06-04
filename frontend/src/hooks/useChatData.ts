@@ -226,6 +226,8 @@ export function useChatData(session: Session, state: ChatState) {
 
             const countsObj: { [key: string]: number } = {}
 
+            // NOTE: localStorage-based unread tracking is fragile across tabs (race conditions).
+            // For v1 this is acceptable. V2 will move to server-side room_read_state table.
             roomIds.forEach(roomId => {
                 const lastOpenKey = `lastOpen_${roomId}`
                 const lastOpen = localStorage.getItem(lastOpenKey)

@@ -268,6 +268,7 @@ CREATE POLICY "View members" ON public.room_members FOR SELECT USING (is_room_me
 CREATE POLICY "Self join" ON public.room_members FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Owners can add members" ON public.room_members FOR INSERT WITH CHECK (is_room_creator(room_id));
 CREATE POLICY "Owners or self can remove members" ON public.room_members FOR DELETE USING (is_room_creator(room_id) OR auth.uid() = user_id);
+CREATE POLICY "Owners can send invitations" ON public.room_invitations FOR INSERT WITH CHECK (is_room_creator(room_id));
 
 -- 6.5 STORAGE SETUP (Requires bucket manually usually, but inserting records)
 -- (Skipping buckets insert here as it might conflict with existing Supabase storage management)

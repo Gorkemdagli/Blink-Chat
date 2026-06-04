@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ArrowLeft, Search, MoreHorizontal, X } from 'lucide-react'
 import { Room, User, Message } from '../types'
+import ConfirmModal from './ConfirmModal'
 
 interface ChatHeaderProps {
     selectedRoom: Room
@@ -264,77 +265,29 @@ export default function ChatHeader({
 
             {/* Modals for Confirmation */}
             {showDeleteConfirm && (
-                <div
-                    className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[200] animate-in fade-in duration-200"
-                    onClick={() => setShowDeleteConfirm(false)}
-                >
-                    <div
-                        className="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 max-w-sm w-full mx-4 shadow-2xl border border-gray-100 dark:border-slate-800 scale-in-center"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="flex flex-col items-center text-center">
-                            <div className="w-16 h-16 bg-red-50 dark:bg-red-900/20 rounded-2xl flex items-center justify-center mb-4">
-                                <X size={32} className="text-red-500" />
-                            </div>
-                            <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Sohbeti Sil</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 font-medium">Bu sohbeti silmek istediğinizden emin misiniz? (Sadece sizin görünümünüzden silinir)</p>
-                            <div className="flex gap-3 w-full">
-                                <button
-                                    onClick={() => setShowDeleteConfirm(false)}
-                                    className="flex-1 py-3 bg-gray-100 dark:bg-slate-800 text-slate-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-slate-700 transition-all text-sm"
-                                >
-                                    İptal
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        onDeleteChat && onDeleteChat()
-                                        setShowDeleteConfirm(false)
-                                    }}
-                                    className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-all shadow-lg shadow-red-100 dark:shadow-none text-sm"
-                                >
-                                    Evet, Sil
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <ConfirmModal
+                    isOpen={showDeleteConfirm}
+                    onClose={() => setShowDeleteConfirm(false)}
+                    onConfirm={() => { onDeleteChat && onDeleteChat() }}
+                    title="Sohbeti Sil"
+                    description="Bu sohbeti silmek istediğinizden emin misiniz? (Sadece sizin görünümünüzden silinir)"
+                    confirmText="Evet, Sil"
+                    cancelText="İptal"
+                    variant="danger"
+                />
             )}
 
             {showRemoveFriendConfirm && (
-                <div
-                    className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[200] animate-in fade-in duration-200"
-                    onClick={() => setShowRemoveFriendConfirm(false)}
-                >
-                    <div
-                        className="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 max-w-sm w-full mx-4 shadow-2xl border border-gray-100 dark:border-slate-800 scale-in-center"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="flex flex-col items-center text-center">
-                            <div className="w-16 h-16 bg-red-50 dark:bg-red-900/20 rounded-2xl flex items-center justify-center mb-4">
-                                <X size={32} className="text-red-500" />
-                            </div>
-                            <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Arkadaşlıktan Çıkar</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 font-medium">Bu kişiyi arkadaşlıktan çıkarmak istediğinizden emin misiniz?</p>
-                            <div className="flex gap-3 w-full">
-                                <button
-                                    onClick={() => setShowRemoveFriendConfirm(false)}
-                                    className="flex-1 py-3 bg-gray-100 dark:bg-slate-800 text-slate-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-slate-700 transition-all text-sm"
-                                >
-                                    İptal
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        onRemoveFriend && onRemoveFriend()
-                                        setShowRemoveFriendConfirm(false)
-                                    }}
-                                    className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-all shadow-lg shadow-red-100 dark:shadow-none text-sm"
-                                >
-                                    Çıkar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <ConfirmModal
+                    isOpen={showRemoveFriendConfirm}
+                    onClose={() => setShowRemoveFriendConfirm(false)}
+                    onConfirm={() => { onRemoveFriend && onRemoveFriend() }}
+                    title="Arkadaşlıktan Çıkar"
+                    description="Bu kişiyi arkadaşlıktan çıkarmak istediğinizden emin misiniz?"
+                    confirmText="Çıkar"
+                    cancelText="İptal"
+                    variant="danger"
+                />
             )}
         </header>
     )

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { X, Camera, Copy, Check, User, Save, Loader2, UserPlus, Clock, UserMinus } from 'lucide-react'
+import { X, Camera, Copy, Check, User, Save, Loader2, UserPlus, Clock, UserMinus, Download } from 'lucide-react'
 import { User as UserType } from '../types'
 import { supabase } from '../supabaseClient'
 import ConfirmModal from './ConfirmModal'
@@ -38,6 +38,7 @@ export default function ProfileModal({
     const [error, setError] = useState('')
     const [successMessage, setSuccessMessage] = useState('')
     const [showConfirmRemove, setShowConfirmRemove] = useState(false)
+    const [previewImage, setPreviewImage] = useState<string | null>(null)
 
     // Fetch latest user data (bio) when modal opens
     useEffect(() => {
@@ -100,6 +101,27 @@ export default function ProfileModal({
         setError('')
 
         try {
+            // Canvas resize: max 200x200, JPEG 80%
+            const resizedBlob = await new Promise<Blob>((resolve, reject) => {
+                const img = new Image()
+                img.onload = () => {
+                    const canvas = document.createElement('canvas')
+                    const MAX = 200
+                    let { width, height } = img
+                    if (width > height) {
+                        if (width > MAX) { height = (height * MAX) / width; width = MAX }
+                    } else {
+                        if (height > MAX) { width = (width * MAX) / height; height = MAX }
+                    }
+                    canvas.width = width
+                    canvas.height = height
+                    canvas.getContext('2d')?.drawImage(img, 0, 0, width, height)
+                    canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Canvas empty')), 'image/jpeg', 0.80)
+                }
+                img.onerror = reject
+                img.src = URL.createObjectURL(file)
+            })
+
             // Timestamp verip CDN'i %100 by-pass etmek için dosya adını unique yapıyoruz
             const timestamp = Date.now()
             let newFileName = `profile-${user.user_code || user.id}-${timestamp}`
@@ -134,7 +156,7 @@ export default function ProfileModal({
             // 2. ADIM: YENİ FOTOĞRAFI YÜKLE ("...yenisi kalmalı")
             const { error: uploadError } = await supabase.storage
                 .from('avatars')
-                .upload(newFileName, file)
+                .upload(newFileName, resizedBlob)
 
             if (uploadError) throw uploadError
 
@@ -271,6 +293,12 @@ export default function ProfileModal({
                             <img
                                 src={avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username || 'User')}`}
                                 alt={user.username}
+                                onClick={(e) => {
+                                    if (avatarUrl) {
+                                        e.stopPropagation()
+                                        setPreviewImage(avatarUrl)
+                                    }
+                                }}
                                 onError={(e) => {
                                     const target = e.target as HTMLImageElement;
                                     target.onerror = null;
@@ -293,6 +321,57 @@ export default function ProfileModal({
                                 </div>
                             )}
                         </div>
+
+                        {/* Avatar lightbox */}
+                        {previewImage && (
+                            <div
+                                className="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center z-[300] animate-in fade-in duration-300"
+                                onClick={() => setPreviewImage(null)}
+                            >
+                                <div className="absolute top-0 left-0 right-0 h-20 bg-gradient-to-b from-black/50 to-transparent flex items-center justify-between px-6 z-10">
+                                    <div className="text-white/70 text-sm font-medium">Profil Fotoğrafı</div>
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            className="p-2.5 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all"
+                                            onClick={async (e) => {
+                                                e.stopPropagation()
+                                                try {
+                                                    const response = await fetch(previewImage)
+                                                    const blob = await response.blob()
+                                                    const url = window.URL.createObjectURL(blob)
+                                                    const a = document.createElement('a')
+                                                    a.href = url
+                                                    a.download = previewImage.split('/').pop() || 'profile_photo'
+                                                    document.body.appendChild(a)
+                                                    a.click()
+                                                    window.URL.revokeObjectURL(url)
+                                                    document.body.removeChild(a)
+                                                } catch {
+                                                    window.open(previewImage, '_blank')
+                                                }
+                                            }}
+                                            title="İndir"
+                                        >
+                                            <Download size={24} />
+                                        </button>
+                                        <button
+                                            className="p-2.5 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all"
+                                            onClick={() => setPreviewImage(null)}
+                                            title="Kapat"
+                                        >
+                                            <X size={24} />
+                                        </button>
+                                    </div>
+                                </div>
+                                <img
+                                    src={previewImage}
+                                    className="max-w-full max-h-full object-contain shadow-2xl animate-in zoom-in-95 duration-300"
+                                    alt="Profil fotoğrafı"
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                            </div>
+                        )}
+
                         {isOwnProfile && (
                             <>
                                 <input

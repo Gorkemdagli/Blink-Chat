@@ -11,11 +11,12 @@ export interface MessageData {
     messageType?: string;
     fileName?: string;
     fileSize?: number;
+    clientTempId?: string;
 }
 
 export class MessageService {
     static async saveMessage(data: MessageData) {
-        const { roomId, userId, content, fileUrl, messageType = 'text', fileName, fileSize } = data;
+        const { roomId, userId, content, fileUrl, messageType = 'text', fileName, fileSize, clientTempId } = data;
         // xss default options already escape <, >, &, ", '. The flags below are
         // defensive intent-revealing: stripIgnoreTag drops inner text of unknown
         // tags (e.g. <unknown>x</unknown> → ''); allowCommentTag keeps HTML
@@ -85,7 +86,8 @@ export class MessageService {
 
         return {
             ...messageData[0],
-            user: user
+            user: user,
+            ...(clientTempId && { clientTempId })
         };
     }
 

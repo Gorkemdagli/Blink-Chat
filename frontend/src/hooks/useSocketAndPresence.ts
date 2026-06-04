@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Session } from '@supabase/supabase-js'
 import { supabase } from '../supabaseClient'
 import { getSocket, onConnectionStateChange } from '../socket'
@@ -28,12 +28,21 @@ export function useSocketAndPresence(session: Session, state: ChatState, dataFun
         fetchPendingInvitations, fetchMessages,
     } = dataFunctions
 
-    // currentRoom ref'ini güncelle
+    // previous room ID'yi takip et — room değişince leaveRoom emit et
+    const prevRoomIdRef = useRef<string | null>(null)
+
     useEffect(() => {
+        const prev = prevRoomIdRef.current
+        if (prev && prev !== currentRoom?.id) {
+            getSocket()?.emit('leaveRoom', prev)
+        }
+        prevRoomIdRef.current = currentRoom?.id ?? null
         currentRoomRef.current = currentRoom
     }, [currentRoom, currentRoomRef])
 
     // Önceki odadan ayrılırken lastOpen güncelle
+    // NOTE: localStorage-based unread tracking is fragile across tabs.
+    // For v1 this is acceptable. V2 will move to server-side room_read_state table.
     useEffect(() => {
         return () => {
             if (currentRoom && messages.length > 0) {
@@ -71,11 +80,14 @@ export function useSocketAndPresence(session: Session, state: ChatState, dataFun
                 setMessages((prev: Message[]) => {
                     if (prev.some(msg => msg.id === messageWithUser.id)) return prev
                     // Replace optimistic temp message with server-confirmed one
-                    const tempIdx = prev.findIndex(msg =>
-                        msg.id.startsWith('temp-') &&
-                        msg.user_id === messageWithUser.user_id &&
-                        msg.content === messageWithUser.content
-                    )
+                    // Match by clientTempId (exact) before falling back to content match
+                    const tempIdx = messageWithUser.clientTempId
+                        ? prev.findIndex(msg => msg.id === messageWithUser.clientTempId)
+                        : prev.findIndex(msg =>
+                            msg.id.startsWith('temp-') &&
+                            msg.user_id === messageWithUser.user_id &&
+                            msg.content === messageWithUser.content
+                        )
                     if (tempIdx !== -1) {
                         const next = [...prev]
                         next[tempIdx] = messageWithUser
@@ -326,6 +338,9 @@ export function useSocketAndPresence(session: Session, state: ChatState, dataFun
         return () => {
             socket.off('newMessage', handleUnifiedNewMessage)
             socket.off('messages_read')
+            if (prevRoomIdRef.current) {
+                socket.emit('leaveRoom', prevRoomIdRef.current)
+            }
             if (globalChannel) supabase.removeChannel(globalChannel)
             if (heartbeatInterval) clearInterval(heartbeatInterval)
             if (presenceChannel) {
