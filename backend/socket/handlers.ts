@@ -118,7 +118,7 @@ return current
                     user_id: userId,
                     last_seen_at: new Date().toISOString(),
                     status: 'online'
-                }).catch(err => logger.error('last_seen upsert error:', err))
+                }).then(({ error }) => { if (error) logger.error('last_seen upsert error:', error) })
             }
         })
 
@@ -263,7 +263,7 @@ return current
                         user_id: userId,
                         last_seen_at: new Date().toISOString(),
                         status: 'offline'
-                    }).catch(err => logger.error('last_seen offline upsert error:', err));
+                    }).then(({ error }) => { if (error) logger.error('last_seen offline upsert error:', error) });
                 }
             } catch (err) {
                 logger.error(`Redis presence del error:`, err);
