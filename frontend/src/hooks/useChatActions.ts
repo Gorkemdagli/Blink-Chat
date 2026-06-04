@@ -108,6 +108,10 @@ export function useChatActions(session: Session, state: ChatState, dataFunctions
             // Update current room
             setCurrentRoom(realRoom)
 
+            // Define socket + tempId before emitPromise
+            const socket = getSocket(session.access_token)
+            const tempId = `temp-${Date.now()}-${Math.random()}`
+
             // Wrap socket emit in promise with ack + timeout for rollback
             const emitPromise = new Promise<void>((resolve, reject) => {
                 const timer = setTimeout(() => reject(new Error('socket_timeout')), 5000)
@@ -139,8 +143,29 @@ export function useChatActions(session: Session, state: ChatState, dataFunctions
 
             setNewMessage('')
         } else {
-
-    // Generic Message Send Handler (used by ChatWindow)
+            // Non-provisional room: emit directly
+            const socket = getSocket(session.access_token)
+            const tempId = `temp-${Date.now()}-${Math.random()}`
+            socket.emit('sendMessage', {
+                roomId: targetRoomId,
+                userId: session.user.id,
+                content: newMessage.trim(),
+                clientTempId: tempId
+            })
+            sentMessageIdsRef.current.add(tempId)
+            const optimisticMsg: Message = {
+                id: tempId,
+                room_id: targetRoomId,
+                user_id: session.user.id,
+                content: newMessage.trim(),
+                message_type: 'text',
+                status: 'sent',
+                created_at: new Date().toISOString()
+            }
+            setMessages((prev: Message[]) => [...prev, optimisticMsg])
+            setNewMessage('')
+        }
+    }, [newMessage, currentRoom, session.user.id, setNewMessage, setRooms, setCurrentRoom, showToast, sentMessageIdsRef, setMessages])
     const handleSendMessage = useCallback(async (content: string, fileUrl: string | null, messageType: string, fileName: string | null, fileSize: number | null) => {
         if (!currentRoom) return
 
@@ -189,6 +214,10 @@ export function useChatActions(session: Session, state: ChatState, dataFunctions
             setRooms((prev: Room[]) => [realRoom, ...prev])
             // Update current room
             setCurrentRoom(realRoom)
+
+            // Define socket + tempId before emitPromise
+            const socket = getSocket(session.access_token)
+            const tempId = `temp-${Date.now()}-${Math.random()}`
 
             // Wrap socket emit in promise with ack + timeout for rollback
             const emitPromise = new Promise<void>((resolve, reject) => {
