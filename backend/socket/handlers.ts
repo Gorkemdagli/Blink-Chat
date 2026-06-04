@@ -104,12 +104,23 @@ return current
             logger.error(`Redis presence set error:`, err);
         });
 
-        // İstemci heartbeat gönderdikçe süreyi uzatması için
+        // Redis heartbeat + debounced DB last_seen update
+        let lastSeenUpdate = 0
         socket.on('heartbeat', () => {
             redis.set(`user:status:${userId}`, 'online', 'EX', 60).catch(err => {
                 logger.error(`Redis presence heartbeat error:`, err);
-            });
-        });
+            })
+            // V2: Debounce DB write to ~30s
+            const now = Date.now()
+            if (now - lastSeenUpdate > 30000) {
+                lastSeenUpdate = now
+                supabase.from('user_last_seen').upsert({
+                    user_id: userId,
+                    last_seen_at: new Date().toISOString(),
+                    status: 'online'
+                }).then(({ error }) => { if (error) logger.error('last_seen upsert error:', error) })
+            }
+        })
 
         // ─── joinRoom: Üyelik kontrolü ───
         socket.on('joinRoom', async (roomId: string) => {
@@ -153,6 +164,14 @@ return current
             const allowed = await (redis as any).rateLimitMsg(rateLimitKey, windowMs);
             if (!allowed) {
                 socket.emit('rate_limited', { retryAfter: windowMs });
+                return;
+            }
+
+            // Global per-user budget (120 msg/min across all sockets = ~2/sec)
+            const globalKey = `ratelimit:msg-global:${userId}`;
+            const globalAllowed = await (redis as any).rateLimitMsgGlobal(globalKey, 120, 60000);
+            if (!globalAllowed) {
+                socket.emit('rate_limited', { retryAfter: 60000, global: true });
                 return;
             }
 
@@ -239,6 +258,12 @@ return current
                 if (sockets.length === 0) {
                     // Kullanıcının hiçbir sekmesi/bağlantısı kalmadıysa offline yap
                     await redis.del(`user:status:${userId}`);
+                    // V2: DB'de anlık offline göster
+                    supabase.from('user_last_seen').upsert({
+                        user_id: userId,
+                        last_seen_at: new Date().toISOString(),
+                        status: 'offline'
+                    }).then(({ error }) => { if (error) logger.error('last_seen offline upsert error:', error) });
                 }
             } catch (err) {
                 logger.error(`Redis presence del error:`, err);

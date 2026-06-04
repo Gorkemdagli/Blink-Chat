@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react'
 import { Session } from '@supabase/supabase-js'
 import { supabase } from './supabaseClient'
-import { setSocketToken } from './socket'
+import { setSocketToken, disconnectSocket } from './socket'
 import Auth from './components/Auth'
 import Chat from './components/Chat'
 
 
 // Helper functions defined outside component to be stable dependencies
-// Check if session is inactive for too long (security: clear inactive sessions)
-const isSessionInactive = (session: Session | null) => {
+// UI nicety: detect stale local activity for inactivity prompt. Real session boundary is JWT expiry.
+const isLocalActivityStale = (session: Session | null) => {
   if (!session) return true
 
   // Check last active time (when user was last on the app)
@@ -46,8 +46,8 @@ const updateLastActive = (session: Session | null) => {
 const isSessionValid = (session: Session | null) => {
   if (!session) return false
 
-  // Check if session is inactive for too long
-  if (isSessionInactive(session)) {
+  // Check if local activity is stale (UI nicety only — JWT expiry is real boundary)
+  if (isLocalActivityStale(session)) {
     return false
   }
 
@@ -146,6 +146,7 @@ function App() {
       console.log('Auth state changed:', event, session ? 'has session' : 'no session')
 
       if (event === 'SIGNED_OUT' || !session) {
+        disconnectSocket()
         setSocketToken(null)
         setSession(null)
         setLoading(false)

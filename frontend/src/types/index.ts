@@ -52,6 +52,7 @@ export interface Message {
 // `Message` ile aynı şekil + kullanıcı bilgisi zorunlu (backend `messageService` join'i).
 export interface WebSocketMessage extends Message {
     user: User
+    clientTempId?: string
 }
 
 export interface FriendRequest {

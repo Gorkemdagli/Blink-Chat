@@ -30,7 +30,8 @@ export const MessageDataSchema = z.object({
         const ext = name.split('.').pop()?.toLowerCase();
         return ext && ALLOWED_FILE_EXTENSIONS.includes(ext);
     }, { message: "Geçersiz dosya uzantısı" }),
-    fileSize: z.number().max(25 * 1024 * 1024, "Dosya boyutu 25MB'ı aşamaz").optional().nullable()
+    fileSize: z.number().max(25 * 1024 * 1024, "Dosya boyutu 25MB'ı aşamaz").optional().nullable(),
+    clientTempId: z.string().optional()
 }).refine(data => data.content.trim().length > 0 || !!data.fileUrl, {
     message: "Content or file url must be provided",
     path: ["content"]

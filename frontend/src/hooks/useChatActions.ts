@@ -107,33 +107,65 @@ export function useChatActions(session: Session, state: ChatState, dataFunctions
             setRooms((prev: Room[]) => [realRoom, ...prev])
             // Update current room
             setCurrentRoom(realRoom)
+
+            // Define socket + tempId before emitPromise
+            const socket = getSocket(session.access_token)
+            const tempId = `temp-${Date.now()}-${Math.random()}`
+
+            // Wrap socket emit in promise with ack + timeout for rollback
+            const emitPromise = new Promise<void>((resolve, reject) => {
+                const timer = setTimeout(() => reject(new Error('socket_timeout')), 5000)
+                socket.emit('sendMessage', {
+                    roomId: targetRoomId,
+                    userId: session.user.id,
+                    content: newMessage.trim(),
+                    clientTempId: tempId
+                }, (ack: any) => {
+                    clearTimeout(timer)
+                    if (ack?.error) reject(ack.error)
+                    else resolve()
+                })
+            })
+
+            try {
+                await emitPromise
+            } catch (err) {
+                // Rollback: delete the created room on socket failure
+                console.error('Socket emit failed, rolling back room:', err)
+                await supabase.from('rooms').delete().eq('id', newRoom.id)
+                setRooms((prev: Room[]) => prev.filter(r => r.id !== newRoom.id))
+                if (currentRoom?.id === newRoom.id) {
+                    setCurrentRoom(null)
+                }
+                showToast('Mesaj gönderilemedi (ağ hatası)', 'error')
+                return
+            }
+
+            setNewMessage('')
+        } else {
+            // Non-provisional room: emit directly
+            const socket = getSocket(session.access_token)
+            const tempId = `temp-${Date.now()}-${Math.random()}`
+            socket.emit('sendMessage', {
+                roomId: targetRoomId,
+                userId: session.user.id,
+                content: newMessage.trim(),
+                clientTempId: tempId
+            })
+            sentMessageIdsRef.current.add(tempId)
+            const optimisticMsg: Message = {
+                id: tempId,
+                room_id: targetRoomId,
+                user_id: session.user.id,
+                content: newMessage.trim(),
+                message_type: 'text',
+                status: 'sent',
+                created_at: new Date().toISOString()
+            }
+            setMessages((prev: Message[]) => [...prev, optimisticMsg])
+            setNewMessage('')
         }
-
-        const socket = getSocket(session.access_token)
-        socket.emit('sendMessage', {
-            roomId: targetRoomId,
-            userId: session.user.id,
-            content: newMessage.trim()
-        })
-
-        // Optimistic add — echo handler skips this ID via sentMessageIdsRef
-        const tempId = `temp-${Date.now()}-${Math.random()}`
-        sentMessageIdsRef.current.add(tempId)
-        const optimisticMsg: Message = {
-            id: tempId,
-            room_id: targetRoomId,
-            user_id: session.user.id,
-            content: newMessage.trim(),
-            message_type: 'text',
-            status: 'sent',
-            created_at: new Date().toISOString()
-        }
-        setMessages((prev: Message[]) => [...prev, optimisticMsg])
-
-        setNewMessage('')
     }, [newMessage, currentRoom, session.user.id, setNewMessage, setRooms, setCurrentRoom, showToast, sentMessageIdsRef, setMessages])
-
-    // Generic Message Send Handler (used by ChatWindow)
     const handleSendMessage = useCallback(async (content: string, fileUrl: string | null, messageType: string, fileName: string | null, fileSize: number | null) => {
         if (!currentRoom) return
 
@@ -182,32 +214,71 @@ export function useChatActions(session: Session, state: ChatState, dataFunctions
             setRooms((prev: Room[]) => [realRoom, ...prev])
             // Update current room
             setCurrentRoom(realRoom)
-        }
 
-        const socket = getSocket(session.access_token)
-        socket.emit('sendMessage', {
-            roomId: targetRoomId,
-            userId: session.user.id,
-            content,
-            fileUrl,
-            messageType,
-            fileName,
-            fileSize
-        })
+            // Define socket + tempId before emitPromise
+            const socket = getSocket(session.access_token)
+            const tempId = `temp-${Date.now()}-${Math.random()}`
 
-        // Optimistic add
-        const tempId = `temp-${Date.now()}-${Math.random()}`
-        sentMessageIdsRef.current.add(tempId)
-        const optimisticMsg: Message = {
-            id: tempId,
-            room_id: targetRoomId,
-            user_id: session.user.id,
-            content,
-            message_type: messageType as Message['message_type'],
-            status: 'sent',
-            created_at: new Date().toISOString()
+            // Wrap socket emit in promise with ack + timeout for rollback
+            const emitPromise = new Promise<void>((resolve, reject) => {
+                const timer = setTimeout(() => reject(new Error('socket_timeout')), 5000)
+                socket.emit('sendMessage', {
+                    roomId: targetRoomId,
+                    userId: session.user.id,
+                    content,
+                    fileUrl,
+                    messageType,
+                    fileName,
+                    fileSize,
+                    clientTempId: tempId
+                }, (ack: any) => {
+                    clearTimeout(timer)
+                    if (ack?.error) reject(ack.error)
+                    else resolve()
+                })
+            })
+
+            try {
+                await emitPromise
+            } catch (err) {
+                // Rollback: delete the created room on socket failure
+                console.error('Socket emit failed, rolling back room:', err)
+                await supabase.from('rooms').delete().eq('id', newRoom.id)
+                setRooms((prev: Room[]) => prev.filter(r => r.id !== newRoom.id))
+                if (currentRoom?.id === newRoom.id) {
+                    setCurrentRoom(null)
+                }
+                showToast('Mesaj gönderilemedi (ağ hatası)', 'error')
+                return
+            }
+        } else {
+            // Non-provisional: emit directly
+            const socket = getSocket(session.access_token)
+            const tempId = `temp-${Date.now()}-${Math.random()}`
+            socket.emit('sendMessage', {
+                roomId: targetRoomId,
+                userId: session.user.id,
+                content,
+                fileUrl,
+                messageType,
+                fileName,
+                fileSize,
+                clientTempId: tempId
+            })
+
+            // Optimistic add
+            sentMessageIdsRef.current.add(tempId)
+            const optimisticMsg: Message = {
+                id: tempId,
+                room_id: targetRoomId,
+                user_id: session.user.id,
+                content,
+                message_type: messageType as Message['message_type'],
+                status: 'sent',
+                created_at: new Date().toISOString()
+            }
+            setMessages((prev: Message[]) => [...prev, optimisticMsg])
         }
-        setMessages((prev: Message[]) => [...prev, optimisticMsg])
     }, [currentRoom, session.user.id, setRooms, setCurrentRoom, showToast, sentMessageIdsRef, setMessages])
 
     // Oda seç - startDM inline olarak kullanılıyor
@@ -417,120 +488,27 @@ export function useChatActions(session: Session, state: ChatState, dataFunctions
         showToast('Gruptan ayrıldınız.', 'success')
     }, [session.user.id, currentRoom, setRooms, setCurrentRoom, setView, showToast])
 
-    // Mesaj sil
+    // Mesaj sil — atomic server-side delete (race-safe, single transaction)
     const deleteMessage = useCallback(async (messageId: string) => {
-        const { data: message, error: messageError } = await supabase
-            .from('messages')
-            .select('room_id, user_id, file_url')
-            .eq('id', messageId)
-            .single()
+        const { error } = await supabase.rpc('delete_message', {
+            p_message_id: messageId,
+            p_user_id: session.user.id
+        })
 
-        if (messageError || !message) {
-            console.error('Error fetching message:', messageError)
-            showToast('Mesaj bulunamadı', 'error')
+        if (error) {
+            console.error('Error deleting message:', error)
+            showToast('Mesaj silinirken hata oluştu', 'error')
             return
         }
 
-        const { data: existingDeletion } = await supabase
-            .from('message_deletions')
-            .select('id')
-            .eq('message_id', messageId)
-            .eq('user_id', session.user.id)
-            .maybeSingle()
-
-        if (!existingDeletion) {
-            const { error: deletionError } = await supabase
-                .from('message_deletions')
-                .insert([{
-                    message_id: messageId,
-                    user_id: session.user.id
-                }])
-
-            if (deletionError) {
-                console.error('Error deleting message:', deletionError)
-                showToast('Mesaj silinirken bir hata oluştu: ' + deletionError.message, 'error')
-                return
-            }
-        }
-
         // Update ref to prevent fetching deleted messages later
-        if (deletedMessageIdsRef?.current) {
-            deletedMessageIdsRef.current.add(messageId)
-        }
-
-
-        // Check if all members have deleted the message
-        try {
-            // 1. Get total members count
-            const { count: memberCount, error: memberError } = await supabase
-                .from('room_members')
-                .select('*', { count: 'exact', head: true })
-                .eq('room_id', message.room_id)
-
-            if (memberError) throw memberError
-
-            // 2. Get total deletions count
-            const { count: deletionCount, error: deletionError } = await supabase
-                .from('message_deletions')
-                .select('*', { count: 'exact', head: true })
-                .eq('message_id', messageId)
-
-            if (deletionError) throw deletionError
-
-            // 3. If everyone deleted it, hard delete message and file
-            if (memberCount !== null && deletionCount !== null && deletionCount >= memberCount) {
-                console.log('All members deleted message, performing hard delete...')
-
-                // Delete file from storage if exists
-                if (message.file_url) {
-                    try {
-                        // Extract file path from public URL
-                        // Example: https://.../storage/v1/object/public/chat-files/folder/filename.ext
-                        const fileUrlParts = message.file_url.split('chat-files/')
-                        if (fileUrlParts.length > 1) {
-                            const filePath = fileUrlParts[1]
-                            const { error: storageError } = await supabase.storage
-                                .from('chat-files')
-                                .remove([filePath])
-
-                            if (storageError) {
-                                console.error('Error deleting file from storage:', storageError)
-                            } else {
-                                console.log('File deleted from storage:', filePath)
-                            }
-                        }
-                    } catch (err) {
-                        console.error('Error parsing file URL:', err)
-                    }
-                }
-
-                // Hard delete message (cascade will handle deletions table)
-                const { error: hardDeleteError } = await supabase
-                    .from('messages')
-                    .delete()
-                    .eq('id', messageId)
-
-                if (hardDeleteError) {
-                    console.error('Error hard deleting message:', hardDeleteError)
-                } else {
-                    console.log('Message hard deleted successfully')
-                }
-            }
-        } catch (error) {
-            console.error('Error checking for hard delete:', error)
-        }
-
+        deletedMessageIdsRef?.current?.add(messageId)
         setMessages((prev: Message[]) => prev.filter((msg: Message) => msg.id !== messageId))
     }, [session.user.id, setMessages, showToast])
 
     // Davet gönder
     const sendInvitation = useCallback(async (inviteeId: string) => {
         if (!currentRoom) return
-
-        if (currentRoom.created_by !== session.user.id) {
-            showToast('Sadece oda sahibi davet gönderebilir!', 'error')
-            return
-        }
 
         const { error } = await supabase
             .from('room_invitations')
